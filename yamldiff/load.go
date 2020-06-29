@@ -23,5 +23,5 @@ func Load(s string) []interface{} {
 		results = append(results, out)
 	}
 
-	return nil
+	return results
 }

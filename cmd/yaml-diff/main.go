@@ -18,10 +18,8 @@ func main() {
 	yamls1 := yamldiff.Load(load(*file1))
 	yamls2 := yamldiff.Load(load(*file2))
 
-	for _, diffs := range yamldiff.Do(yamls1, yamls2) {
-		for _, diff := range diffs {
-			fmt.Println(diff.Diff)
-		}
+	for _, diff := range yamldiff.Do(yamls1, yamls2) {
+		fmt.Println(diff.Diff)
 	}
 
 	fmt.Print()
