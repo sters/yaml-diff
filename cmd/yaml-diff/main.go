@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	yamldiff "github.com/sters/yaml-diff"
+	"github.com/sters/yaml-diff/yamldiff"
 )
 
 func main() {
