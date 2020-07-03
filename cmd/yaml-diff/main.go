@@ -11,8 +11,8 @@ import (
 )
 
 func main() {
-	file1 := flag.String("file1", "", "")
-	file2 := flag.String("file2", "", "")
+	file1 := flag.String("file1", "", "Target File 1 (diff says: -)")
+	file2 := flag.String("file2", "", "Target File 2 (diff says: +)")
 	flag.Parse()
 
 	yamls1 := yamldiff.Load(load(*file1))
