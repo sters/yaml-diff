@@ -1,6 +1,7 @@
 package yamldiff
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -23,15 +24,25 @@ func Do(yamls1 []interface{}, yamls2 []interface{}) Diffs {
 
 		d := make([]Diff, 0, len(yamls2))
 		for n, y2 := range yamls2 {
-			s := Diff{n: n}
+			s := Diff{n: n, difflines: 0}
 
 			if _, ok := marker[n]; ok {
 				continue
 			}
 
 			s.Diff = cmp.Diff(y1, y2)
+
+			if len(strings.TrimSpace(s.Diff)) < 1 {
+				s.Diff = fmt.Sprintf(
+					"Same Content: %s..., %s...",
+					fmt.Sprintf("%+v", y1)[0:100],
+					fmt.Sprintf("%+v", y2)[0:100],
+				)
+			}
+
 			for _, str := range strings.Split(s.Diff, "\n") {
-				if strings.HasPrefix("+", str) || strings.HasPrefix("-", str) {
+				trimmedstr := strings.TrimSpace(str)
+				if strings.HasPrefix(trimmedstr, "+") || strings.HasPrefix(str, "-") {
 					s.difflines++
 				}
 			}
