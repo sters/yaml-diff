@@ -8,4 +8,4 @@ builds:
   goarch:
     - 386
     - amd64
-  main: ./cmd/command/main.go
+  main: ./cmd/yaml-diff/main.go
