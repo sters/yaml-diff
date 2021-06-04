@@ -4,23 +4,22 @@ import (
 	"log"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml"
 )
 
-func Load(s string) []interface{} {
+func Load(s string) RawYamlList {
 	yamls := strings.Split(s, "\n---\n")
 
-	results := make([]interface{}, 0, len(yamls))
+	results := make(RawYamlList, 0, len(yamls))
 	for _, y := range yamls {
-		if len(y) < 100 {
-			continue
-		}
-
 		var out interface{}
 		if err := yaml.Unmarshal([]byte(y), &out); err != nil {
 			log.Fatalf("f1, %+v", err)
 		}
-		results = append(results, out)
+		results = append(
+			results,
+			newRawYaml(out),
+		)
 	}
 
 	return results

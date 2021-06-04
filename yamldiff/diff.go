@@ -9,34 +9,52 @@ import (
 )
 
 type Diff struct {
-	n         int
 	Diff      string
 	difflines int
+
+	yaml1 *RawYaml
+	yaml2 *RawYaml
 }
 
-type Diffs []Diff
+type Diffs []*Diff
 
-func Do(yamls1 []interface{}, yamls2 []interface{}) Diffs {
-	var diffs Diffs
+func Do(list1 RawYamlList, list2 RawYamlList) Diffs {
+	var result Diffs
 
-	marker := map[int]bool{}
-	for _, y1 := range yamls1 {
+	checked := map[string]struct{}{} // RawYaml.id => struct{}
 
-		d := make([]Diff, 0, len(yamls2))
-		for n, y2 := range yamls2 {
-			s := Diff{n: n, difflines: 0}
+	for _, yaml1 := range list1 {
 
-			if _, ok := marker[n]; ok {
+		diffs := make([]*Diff, 0, len(list2))
+
+		for _, yaml2 := range list2 {
+			if _, ok := checked[yaml2.id]; ok {
 				continue
 			}
 
-			s.Diff = cmp.Diff(y1, y2)
+			s := &Diff{
+				Diff:  cmp.Diff(yaml1.raw, yaml2.raw),
+				yaml1: yaml1,
+				yaml2: yaml2,
+			}
 
 			if len(strings.TrimSpace(s.Diff)) < 1 {
+				content1 := fmt.Sprintf("%+v", yaml1.raw)
+				content1trimlen := 100
+				if len(content1) < content1trimlen {
+					content1trimlen = len(content1)
+				}
+
+				content2 := fmt.Sprintf("%+v", yaml2.raw)
+				content2trimlen := 100
+				if len(content2) < content2trimlen {
+					content2trimlen = len(content2)
+				}
+
 				s.Diff = fmt.Sprintf(
 					"Same Content: %s..., %s...",
-					fmt.Sprintf("%+v", y1)[0:100],
-					fmt.Sprintf("%+v", y2)[0:100],
+					content1[:content1trimlen],
+					content2[:content2trimlen],
 				)
 			}
 
@@ -47,16 +65,71 @@ func Do(yamls1 []interface{}, yamls2 []interface{}) Diffs {
 				}
 			}
 
-			d = append(d, s)
+			diffs = append(diffs, s)
 		}
 
-		sort.Slice(d, func(i, j int) bool {
-			return d[i].difflines < d[j].difflines
+		if len(diffs) == 0 {
+			continue
+		}
+
+		sort.Slice(diffs, func(i, j int) bool {
+			return diffs[i].difflines < diffs[j].difflines
 		})
 
-		diffs = append(diffs, d[0])
-		marker[d[0].n] = true
+		result = append(result, diffs[0])
+		checked[diffs[0].yaml1.id] = struct{}{}
+		checked[diffs[0].yaml2.id] = struct{}{}
 	}
 
-	return diffs
+	// check the unmarked items in list1
+	for _, yaml1 := range list1 {
+		if _, ok := checked[yaml1.id]; ok {
+			continue
+		}
+
+		checked[yaml1.id] = struct{}{}
+
+		content := fmt.Sprintf("%+v", yaml1.raw)
+		trimlen := 100
+		if len(content) < trimlen {
+			trimlen = len(content)
+		}
+
+		result = append(
+			result,
+			&Diff{
+				Diff: fmt.Sprintf(
+					"Not found on another one: %s...",
+					content[:trimlen],
+				),
+				yaml1: yaml1,
+			},
+		)
+	}
+	for _, yaml2 := range list2 {
+		if _, ok := checked[yaml2.id]; ok {
+			continue
+		}
+
+		checked[yaml2.id] = struct{}{}
+
+		content := fmt.Sprintf("%+v", yaml2.raw)
+		trimlen := 100
+		if len(content) < trimlen {
+			trimlen = len(content)
+		}
+
+		result = append(
+			result,
+			&Diff{
+				Diff: fmt.Sprintf(
+					"Not found on another one: %s...",
+					content[:trimlen],
+				),
+				yaml2: yaml2,
+			},
+		)
+	}
+
+	return result
 }

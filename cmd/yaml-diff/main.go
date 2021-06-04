@@ -27,14 +27,16 @@ func main() {
 
 func load(f string) string {
 	file, err := os.Open(f)
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	if err != nil {
-		log.Fatalf("%+v, %s", err, f)
+		log.Printf("%+v, %s", err, f)
+		return ""
 	}
 
 	b, err := ioutil.ReadAll(file)
 	if err != nil {
-		log.Fatalf("%+v, %s", err, f)
+		log.Printf("%+v, %s", err, f)
+		return ""
 	}
 
 	return string(b)

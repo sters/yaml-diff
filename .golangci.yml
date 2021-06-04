@@ -1,0 +1,26 @@
+run:
+  skip-dirs:
+    - bin
+
+linters-settings:
+  golint:
+    min-confidence: 0
+  govet:
+    check-shadowing: true
+
+linters:
+  enable:
+    - gocritic
+    - gofmt
+    - goimports
+    - golint
+    - gosec
+    - misspell
+    - scopelint
+
+issues:
+  exclude-rules:
+    # Exclude shadow checking on the variable named err
+    - text: "shadow: declaration of \"err\""
+      linters:
+        - govet

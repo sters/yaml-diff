@@ -8,7 +8,7 @@ spec:
     app: MyApp
   ports:
   - protocol: TCP
-    port: 80
+    port: 8080
     targetPort: 9376
 ---
 apiVersion: apps/v1
@@ -18,7 +18,7 @@ metadata:
   labels:
     app: MyApp
 spec:
-  replicas: 3
+  replicas: 10
   selector:
     matchLabels:
       app: MyApp
@@ -29,6 +29,12 @@ spec:
     spec:
       containers:
       - name: app
-        image: my-app:1.0.0
+        image: my-app:1.1.0
         ports:
         - containerPort: 9376
+---
+bar:
+  - missing in a.yaml
+---
+baz:
+  - missing in a.yaml
