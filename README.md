@@ -7,8 +7,9 @@
 ## Usage
 
 ```
-go get -u github.com/sters/yaml-diff
+go get -u github.com/sters/yaml-diff/cmd/yaml-diff
 ```
+or download from [Releases](https://github.com/sters/yaml-diff/releases).
 
 ```
 yaml-diff -file1 path/to/foo.yaml -file2 path/to/bar.yaml
