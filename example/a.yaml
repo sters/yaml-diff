@@ -34,3 +34,7 @@ spec:
         - containerPort: 9376
 ---
 foo: missing-in-b
+---
+this:
+  is:
+    the: same

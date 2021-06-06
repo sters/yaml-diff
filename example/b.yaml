@@ -38,3 +38,7 @@ bar:
 ---
 baz:
   - missing in a.yaml
+---
+this:
+  is:
+    the: same

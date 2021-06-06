@@ -1,19 +1,29 @@
 package yamldiff
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
 )
 
+type DiffStatus int
+
+const (
+	DiffStatusExists   DiffStatus = 1
+	DiffStatusSame     DiffStatus = 2
+	DiffStatus1Missing DiffStatus = 3
+	DiffStatus2Missing DiffStatus = 4
+)
+
 type Diff struct {
 	Diff      string
 	difflines int
 
-	yaml1 *RawYaml
-	yaml2 *RawYaml
+	Yaml1Struct *RawYaml
+	Yaml2Struct *RawYaml
+
+	Status DiffStatus
 }
 
 type Diffs []*Diff
@@ -23,113 +33,135 @@ func Do(list1 RawYamlList, list2 RawYamlList) Diffs {
 
 	checked := map[string]struct{}{} // RawYaml.id => struct{}
 
-	for _, yaml1 := range list1 {
+	matchFuncs := []func([]*Diff) *Diff{
+		func(diffs []*Diff) *Diff {
+			for _, d := range diffs {
+				if d.Status == DiffStatusSame {
+					return d
+				}
+			}
+			return nil
+		},
+		func(diffs []*Diff) *Diff {
+			sort.Slice(diffs, func(i, j int) bool {
+				return diffs[i].difflines < diffs[j].difflines
+			})
 
-		diffs := make([]*Diff, 0, len(list2))
+			return diffs[0]
+		},
+	}
 
-		for _, yaml2 := range list2 {
-			if _, ok := checked[yaml2.id]; ok {
+	for _, matchFunc := range matchFuncs {
+		for _, yaml1 := range list1 {
+			if _, ok := checked[yaml1.id]; ok {
 				continue
 			}
 
-			s := &Diff{
-				Diff:  cmp.Diff(yaml1.raw, yaml2.raw),
-				yaml1: yaml1,
-				yaml2: yaml2,
-			}
+			diffs := make([]*Diff, 0, len(list2))
 
-			if len(strings.TrimSpace(s.Diff)) < 1 {
-				content1 := fmt.Sprintf("%+v", yaml1.raw)
-				content1trimlen := 100
-				if len(content1) < content1trimlen {
-					content1trimlen = len(content1)
+			for _, yaml2 := range list2 {
+				if _, ok := checked[yaml2.id]; ok {
+					continue
 				}
 
-				content2 := fmt.Sprintf("%+v", yaml2.raw)
-				content2trimlen := 100
-				if len(content2) < content2trimlen {
-					content2trimlen = len(content2)
+				s := &Diff{
+					Diff:        cmp.Diff(yaml1.Raw, yaml2.Raw),
+					Yaml1Struct: yaml1,
+					Yaml2Struct: yaml2,
+					Status:      DiffStatusExists,
 				}
 
-				s.Diff = fmt.Sprintf(
-					"Same Content: %s..., %s...",
-					content1[:content1trimlen],
-					content2[:content2trimlen],
-				)
-			}
-
-			for _, str := range strings.Split(s.Diff, "\n") {
-				trimmedstr := strings.TrimSpace(str)
-				if strings.HasPrefix(trimmedstr, "+") || strings.HasPrefix(str, "-") {
-					s.difflines++
+				if len(strings.TrimSpace(s.Diff)) < 1 {
+					s.Status = DiffStatusSame
+					s.Diff = createSameFormat(yaml1, s.Status)
+				} else {
+					for _, str := range strings.Split(s.Diff, "\n") {
+						trimmedstr := strings.TrimSpace(str)
+						if strings.HasPrefix(trimmedstr, "+") || strings.HasPrefix(str, "-") {
+							s.difflines++
+						}
+					}
 				}
+
+				diffs = append(diffs, s)
 			}
 
-			diffs = append(diffs, s)
+			if len(diffs) == 0 {
+				continue
+			}
+
+			d := matchFunc(diffs)
+			if d == nil {
+				continue
+			}
+
+			result = append(result, d)
+			checked[d.Yaml1Struct.id] = struct{}{}
+			checked[d.Yaml2Struct.id] = struct{}{}
 		}
-
-		if len(diffs) == 0 {
-			continue
-		}
-
-		sort.Slice(diffs, func(i, j int) bool {
-			return diffs[i].difflines < diffs[j].difflines
-		})
-
-		result = append(result, diffs[0])
-		checked[diffs[0].yaml1.id] = struct{}{}
-		checked[diffs[0].yaml2.id] = struct{}{}
 	}
 
 	// check the unmarked items in list1
-	for _, yaml1 := range list1 {
-		if _, ok := checked[yaml1.id]; ok {
+	for _, Yaml1Struct := range list1 {
+		if _, ok := checked[Yaml1Struct.id]; ok {
 			continue
-		}
-
-		checked[yaml1.id] = struct{}{}
-
-		content := fmt.Sprintf("%+v", yaml1.raw)
-		trimlen := 100
-		if len(content) < trimlen {
-			trimlen = len(content)
 		}
 
 		result = append(
 			result,
 			&Diff{
-				Diff: fmt.Sprintf(
-					"Not found on another one: %s...",
-					content[:trimlen],
-				),
-				yaml1: yaml1,
+				Diff:        "",
+				Yaml1Struct: Yaml1Struct,
+				Status:      DiffStatus2Missing,
 			},
 		)
 	}
+
 	for _, yaml2 := range list2 {
 		if _, ok := checked[yaml2.id]; ok {
 			continue
 		}
 
-		checked[yaml2.id] = struct{}{}
-
-		content := fmt.Sprintf("%+v", yaml2.raw)
-		trimlen := 100
-		if len(content) < trimlen {
-			trimlen = len(content)
-		}
-
 		result = append(
 			result,
 			&Diff{
-				Diff: fmt.Sprintf(
-					"Not found on another one: %s...",
-					content[:trimlen],
-				),
-				yaml2: yaml2,
+				Diff:        "",
+				Yaml2Struct: yaml2,
+				Status:      DiffStatus1Missing,
 			},
 		)
 	}
 
 	return result
+}
+
+func createSameFormat(y *RawYaml, status DiffStatus) string {
+	result := strings.Builder{}
+
+	prefix := ""
+	switch status {
+	case DiffStatusSame:
+		prefix = "  "
+	case DiffStatus1Missing:
+		prefix = "+ "
+	case DiffStatus2Missing:
+		prefix = "- "
+	}
+
+	diff := cmp.Diff(y.Raw, interface{}(1))
+
+	for _, str := range strings.Split(diff, "\n") {
+		if !strings.HasPrefix(str, "-") {
+			continue
+		}
+
+		str = strings.TrimSpace(str)
+		str = strings.Replace(str, "- \t", "", 1)
+
+		result.WriteString(prefix)
+		result.WriteString(str)
+		result.WriteRune('\n')
+	}
+
+	return result.String()
 }

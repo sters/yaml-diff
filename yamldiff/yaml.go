@@ -8,7 +8,7 @@ import (
 )
 
 type RawYaml struct {
-	raw interface{}
+	Raw interface{}
 	id  string
 }
 
@@ -16,7 +16,7 @@ type RawYamlList []*RawYaml
 
 func newRawYaml(raw interface{}) *RawYaml {
 	return &RawYaml{
-		raw: raw,
+		Raw: raw,
 		id:  fmt.Sprintf("%d-%d", time.Now().UnixNano(), randInt()),
 	}
 }
