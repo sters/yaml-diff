@@ -102,16 +102,16 @@ func Do(list1 RawYamlList, list2 RawYamlList) Diffs {
 	}
 
 	// check the unmarked items in list1
-	for _, Yaml1Struct := range list1 {
-		if _, ok := checked[Yaml1Struct.id]; ok {
+	for _, yaml1 := range list1 {
+		if _, ok := checked[yaml1.id]; ok {
 			continue
 		}
 
 		result = append(
 			result,
 			&Diff{
-				Diff:        "",
-				Yaml1Struct: Yaml1Struct,
+				Diff:        createSameFormat(yaml1, DiffStatus2Missing),
+				Yaml1Struct: yaml1,
 				Status:      DiffStatus2Missing,
 			},
 		)
@@ -125,7 +125,7 @@ func Do(list1 RawYamlList, list2 RawYamlList) Diffs {
 		result = append(
 			result,
 			&Diff{
-				Diff:        "",
+				Diff:        createSameFormat(yaml2, DiffStatus1Missing),
 				Yaml2Struct: yaml2,
 				Status:      DiffStatus1Missing,
 			},
@@ -148,7 +148,7 @@ func createSameFormat(y *RawYaml, status DiffStatus) string {
 		prefix = "- "
 	}
 
-	diff := cmp.Diff(y.Raw, interface{}(1))
+	diff := cmp.Diff(y.Raw, interface{}(nil)) // TODO: cmp.Diff is unstable use custom Reporter
 
 	for _, str := range strings.Split(diff, "\n") {
 		if !strings.HasPrefix(str, "-") {
@@ -156,7 +156,8 @@ func createSameFormat(y *RawYaml, status DiffStatus) string {
 		}
 
 		str = strings.TrimSpace(str)
-		str = strings.Replace(str, "- \t", "", 1)
+		str = strings.Replace(str, "- 	", "", 1)
+		str = strings.Replace(str, "- 	", "", 1)
 
 		result.WriteString(prefix)
 		result.WriteString(str)
@@ -165,3 +166,5 @@ func createSameFormat(y *RawYaml, status DiffStatus) string {
 
 	return result.String()
 }
+
+// - 	map[string]i

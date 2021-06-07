@@ -18,8 +18,9 @@ func main() {
 	yamls1 := yamldiff.Load(load(*file1))
 	yamls2 := yamldiff.Load(load(*file2))
 
+	fmt.Printf("--- %s\n+++ %s\n\n", *file1, *file2)
 	for _, diff := range yamldiff.Do(yamls1, yamls2) {
-		fmt.Println(dump(diff))
+		fmt.Println(diff.Diff)
 	}
 
 	fmt.Print()
@@ -40,16 +41,4 @@ func load(f string) string {
 	}
 
 	return string(b)
-}
-
-func dump(d *yamldiff.Diff) string {
-	switch d.Status {
-	case yamldiff.DiffStatusExists, yamldiff.DiffStatusSame:
-		return d.Diff
-
-	case yamldiff.DiffStatus1Missing:
-	case yamldiff.DiffStatus2Missing:
-	}
-
-	return ""
 }
