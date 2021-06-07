@@ -164,7 +164,5 @@ func createSameFormat(y *RawYaml, status DiffStatus) string {
 		result.WriteRune('\n')
 	}
 
-	return result.String()
+	return strings.TrimSuffix(result.String(), ",\n")
 }
-
-// - 	map[string]i
