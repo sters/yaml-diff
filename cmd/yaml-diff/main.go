@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,14 +10,18 @@ import (
 )
 
 func main() {
-	file1 := flag.String("file1", "", "Target File 1 (diff says: -)")
-	file2 := flag.String("file2", "", "Target File 2 (diff says: +)")
-	flag.Parse()
+	if len(os.Args) != 3 {
+		fmt.Println("Usage: yaml-diff file1 file2")
+		os.Exit(1)
+	}
 
-	yamls1 := yamldiff.Load(load(*file1))
-	yamls2 := yamldiff.Load(load(*file2))
+	file1 := os.Args[1]
+	file2 := os.Args[2]
 
-	fmt.Printf("--- %s\n+++ %s\n\n", *file1, *file2)
+	yamls1 := yamldiff.Load(load(file1))
+	yamls2 := yamldiff.Load(load(file2))
+
+	fmt.Printf("--- %s\n+++ %s\n\n", file1, file2)
 	for _, diff := range yamldiff.Do(yamls1, yamls2) {
 		fmt.Println(diff.Diff)
 	}

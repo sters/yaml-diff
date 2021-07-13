@@ -65,7 +65,7 @@ func Do(list1 RawYamlList, list2 RawYamlList) Diffs {
 				}
 
 				s := &Diff{
-					Diff:        cmp.Diff(yaml1.Raw, yaml2.Raw),
+					Diff:        adjustFormat(cmp.Diff(yaml1.Raw, yaml2.Raw)),
 					Yaml1Struct: yaml1,
 					Yaml2Struct: yaml2,
 					Status:      DiffStatusExists,
@@ -148,13 +148,14 @@ func createSameFormat(y *RawYaml, status DiffStatus) string {
 		prefix = "- "
 	}
 
-	diff := cmp.Diff(y.Raw, interface{}(nil)) // TODO: cmp.Diff is unstable use custom Reporter
+	diff := cmp.Diff(y.Raw, struct{}{})
 
 	for _, str := range strings.Split(diff, "\n") {
 		if !strings.HasPrefix(str, "-") {
 			continue
 		}
 
+		// TODO: cmp.Diff is unstable use custom Reporter
 		str = strings.TrimSpace(str)
 		str = strings.Replace(str, "- 	", "", 1)
 		str = strings.Replace(str, "- 	", "", 1)
@@ -164,5 +165,21 @@ func createSameFormat(y *RawYaml, status DiffStatus) string {
 		result.WriteRune('\n')
 	}
 
-	return strings.TrimSuffix(result.String(), ",\n")
+	return adjustFormat(strings.TrimSuffix(result.String(), ",\n")) + "\n"
+}
+
+func adjustFormat(s string) string {
+	for ss, rr := range map[string]string{
+		`map[string]interface{}`: "Map",
+		`map[String]interface{}`: "Map",
+		`[]interface{}`:          "List",
+		`uint64`:                 "Number",
+		`int64`:                  "Number",
+		`string`:                 "String",
+		`bool`:                   "Boolean",
+	} {
+		s = strings.ReplaceAll(s, ss, rr)
+	}
+
+	return s
 }
