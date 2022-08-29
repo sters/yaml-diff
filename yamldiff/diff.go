@@ -29,7 +29,7 @@ type Diff struct {
 type Diffs []*Diff
 
 func Do(list1 RawYamlList, list2 RawYamlList) Diffs {
-	var result Diffs
+	result := make(Diffs, 0, len(list1))
 
 	checked := map[string]struct{}{} // RawYaml.id => struct{}
 

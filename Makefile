@@ -9,20 +9,17 @@ bootstrap-tools:
 	@echo "Installing: " $(TOOLS)
 	@go install $(TOOLS)
 
-.PHONY: run-example
-run-example:
-	go run cmd/yaml-diff/main.go -file1 example/a.yaml -file2 example/b.yaml
-	@echo --------------------
-	go run cmd/yaml-diff/main.go -file1 example/b.yaml -file2 example/a.yaml
+.PHONY: run
+run:
+	go run main.go $(ARGS)
 
 .PHONY: lint
 lint:
-	golangci-lint run -v ./...
-	go-consistent -v ./...
+	$(GOBIN)/golangci-lint run -v ./...
 
 .PHONY: lint-fix
 lint-fix:
-	golangci-lint run --fix -v ./...
+	$(GOBIN)/golangci-lint run --fix -v ./...
 
 .PHONY: test
 test:

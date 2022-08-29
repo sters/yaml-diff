@@ -3,6 +3,7 @@ package yamldiff
 import (
 	"crypto/rand"
 	"fmt"
+	"math"
 	"math/big"
 	"time"
 )
@@ -22,6 +23,6 @@ func newRawYaml(raw interface{}) *RawYaml {
 }
 
 func randInt() int64 {
-	n, _ := rand.Int(rand.Reader, big.NewInt(9223372036854775807))
+	n, _ := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
 	return n.Int64()
 }

@@ -1,22 +1,46 @@
 run:
   skip-dirs:
     - bin
+    - .github
+    - tools
 
 linters-settings:
-  golint:
-    min-confidence: 0
   govet:
     check-shadowing: true
 
 linters:
   enable:
+    - deadcode
+    - errcheck
+    - errorlint
+    - exportloopref
+    - forcetypeassert
+    - goconst
     - gocritic
+    - godot
     - gofmt
+    - gofumpt
     - goimports
-    - golint
+    - gomnd
     - gosec
+    - gosimple
+    - govet
+    - ifshort
+    - ineffassign
     - misspell
-    - scopelint
+    - noctx
+    - prealloc
+    - revive
+    - rowserrcheck
+    - sqlclosecheck
+    - staticcheck
+    - structcheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - varcheck
+    - wastedassign
 
 issues:
   exclude-rules:
@@ -24,3 +48,7 @@ issues:
     - text: "shadow: declaration of \"err\""
       linters:
         - govet
+    # Exclude magic number detection
+    - text: "mnd: Magic number"
+      linters:
+        - gomnd
