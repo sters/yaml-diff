@@ -40,6 +40,7 @@ func Do(list1 RawYamlList, list2 RawYamlList) Diffs {
 					return d
 				}
 			}
+
 			return nil
 		},
 		func(diffs []*Diff) *Diff {

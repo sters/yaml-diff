@@ -9,46 +9,23 @@ linters-settings:
     check-shadowing: true
 
 linters:
-  enable:
-    - deadcode
-    - errcheck
-    - errorlint
-    - exportloopref
-    - forcetypeassert
-    - goconst
-    - gocritic
-    - godot
-    - gofmt
-    - gofumpt
-    - goimports
+  enable-all: true
+  disable:
+    - wsl
+    - exhaustivestruct
+    - exhaustruct
+    - exhaustive
+    - godox
+    - funlen
     - gomnd
-    - gosec
-    - gosimple
-    - govet
-    - ifshort
-    - ineffassign
-    - misspell
-    - noctx
-    - prealloc
-    - revive
-    - rowserrcheck
-    - sqlclosecheck
-    - staticcheck
-    - structcheck
-    - typecheck
-    - unconvert
-    - unparam
-    - unused
-    - varcheck
-    - wastedassign
+    - gocognit
+    - cyclop
 
 issues:
   exclude-rules:
-    # Exclude shadow checking on the variable named err
     - text: "shadow: declaration of \"err\""
-      linters:
-        - govet
-    # Exclude magic number detection
-    - text: "mnd: Magic number"
-      linters:
-        - gomnd
+      linters: ["govet"]
+    - text: "use of `fmt.Print"
+      linters: ["forbidigo"]
+    - text: "is too short for the scope of its usage"
+      linters: ["varnamelen"]

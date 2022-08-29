@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 
@@ -34,12 +34,14 @@ func load(f string) string {
 	defer func() { _ = file.Close() }()
 	if err != nil {
 		log.Printf("%+v, %s", err, f)
+
 		return ""
 	}
 
-	b, err := ioutil.ReadAll(file)
+	b, err := io.ReadAll(file)
 	if err != nil {
 		log.Printf("%+v, %s", err, f)
+
 		return ""
 	}
 
