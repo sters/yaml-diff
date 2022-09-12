@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/goccy/go-yaml v1.9.5
 	github.com/golangci/golangci-lint v1.49.0
-	github.com/google/go-cmp v0.5.8
+	github.com/google/go-cmp v0.5.9
 )
 
 require (
