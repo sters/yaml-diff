@@ -13,21 +13,22 @@ const (
 )
 
 type (
-	rawRaw   = interface{}
-	rawMap   = map[string]rawRaw
-	rawArray = []rawRaw
+	rawType      = interface{}
+	rawTypeMap   = map[string]rawType
+	rawTypeArray = []rawType
 
-	rawDiff struct {
-		a     rawRaw
-		b     rawRaw
-		child *diffChildren
+	diff struct {
+		a        rawType
+		b        rawType
+		children *diffChildren
 
 		status    DiffStatus
 		diffCount int
+		treeLevel int
 	}
 
-	diffChildrenArray = []*rawDiff
-	diffChildrenMap   = map[string]*rawDiff
+	diffChildrenArray = []*diff
+	diffChildrenMap   = map[string]*diff
 
 	diffChildren struct {
 		a diffChildrenArray
@@ -35,27 +36,29 @@ type (
 	}
 )
 
-func diff(rawA rawRaw, rawB rawRaw) *rawDiff {
+func performDiff(rawA rawType, rawB rawType, level int) *diff {
 	if rawA == nil || rawB == nil {
-		return handlePrimitive(rawA, rawB)
+		return handlePrimitive(rawA, rawB, level)
 	}
 
-	if r := handleMap(rawA, rawB); r != nil {
+	if r := handleMap(rawA, rawB, level); r != nil {
 		return r
 	}
 
-	if r := handleArray(rawA, rawB); r != nil {
+	if r := handleArray(rawA, rawB, level); r != nil {
 		return r
 	}
 
 	// other case -> handle as primitive (int/float/bool/string)
-	return handlePrimitive(rawA, rawB)
+	return handlePrimitive(rawA, rawB, level)
 }
 
-func handleMap(rawA rawRaw, rawB rawRaw) *rawDiff {
-	result := &rawDiff{
-		a: rawA,
-		b: rawB,
+// TODO: golang's map is not stable
+func handleMap(rawA rawType, rawB rawType, level int) *diff {
+	result := &diff{
+		a:         rawA,
+		b:         rawB,
+		treeLevel: level,
 	}
 
 	mapA, mapAok := tryMap(rawA)
@@ -69,14 +72,14 @@ func handleMap(rawA rawRaw, rawB rawRaw) *rawDiff {
 	// if A is not map but B is map -> it's different data
 	if !mapAok || !mapBok {
 		result.status = DiffStatusDiff
-		result.diffCount = handlePrimitive(rawA, rawB).diffCount
+		result.diffCount = handlePrimitive(rawA, rawB, level).diffCount
 
 		return result
 	}
 
 	// if both are map
 
-	result.child = &diffChildren{
+	result.children = &diffChildren{
 		m: diffChildrenMap{},
 	}
 	result.status = DiffStatusSame
@@ -89,8 +92,8 @@ func handleMap(rawA rawRaw, rawB rawRaw) *rawDiff {
 				continue
 			}
 
-			result.child.m[keyA] = diff(valA, valB)
-			if result.child.m[keyA].status != DiffStatusSame {
+			result.children.m[keyA] = performDiff(valA, valB, level+1)
+			if result.children.m[keyA].status != DiffStatusSame {
 				result.status = DiffStatusDiff // top level diff can't specify actual reason
 			}
 
@@ -100,7 +103,7 @@ func handleMap(rawA rawRaw, rawB rawRaw) *rawDiff {
 		}
 
 		if !foundKey {
-			result.child.m[keyA] = diff(valA, nil)
+			result.children.m[keyA] = performDiff(valA, nil, level+1)
 			result.status = DiffStatusDiff // top level diff can't specify actual reason
 		}
 	}
@@ -119,13 +122,13 @@ func handleMap(rawA rawRaw, rawB rawRaw) *rawDiff {
 		}
 
 		if !foundKey {
-			result.child.m[keyB] = diff(nil, valB)
+			result.children.m[keyB] = performDiff(nil, valB, level+1)
 			result.status = DiffStatusDiff // top level diff can't specify actual reason
 		}
 	}
 
 	sum := 0
-	for _, v := range result.child.m {
+	for _, v := range result.children.m {
 		sum += v.diffCount
 	}
 	result.diffCount = sum
@@ -133,10 +136,11 @@ func handleMap(rawA rawRaw, rawB rawRaw) *rawDiff {
 	return result
 }
 
-func handleArray(rawA rawRaw, rawB rawRaw) *rawDiff {
-	result := &rawDiff{
-		a: rawA,
-		b: rawB,
+func handleArray(rawA rawType, rawB rawType, level int) *diff {
+	result := &diff{
+		a:         rawA,
+		b:         rawB,
+		treeLevel: level,
 	}
 
 	arrayA, arrayAok := tryArray(rawA)
@@ -150,20 +154,20 @@ func handleArray(rawA rawRaw, rawB rawRaw) *rawDiff {
 	// if A is not array but B is array -> it's different data
 	if !arrayAok || !arrayBok {
 		result.status = DiffStatusDiff
-		result.diffCount = handlePrimitive(rawA, rawB).diffCount
+		result.diffCount = handlePrimitive(rawA, rawB, level).diffCount
 
 		return result
 	}
 
 	// if both are array
 
-	result.child = &diffChildren{
+	result.children = &diffChildren{
 		a: diffChildrenArray{},
 	}
 	result.status = DiffStatusSame
 
 	// check each elements is same or not
-	diffs := map[string]*rawDiff{}
+	diffs := map[string]*diff{}
 	foundA := map[int]struct{}{}
 	foundB := map[int]struct{}{}
 
@@ -171,10 +175,10 @@ func handleArray(rawA rawRaw, rawB rawRaw) *rawDiff {
 		for keyB, valB := range arrayB {
 			key := fmt.Sprintf("%d-%d", keyA, keyB)
 
-			diffs[key] = diff(valA, valB)
+			diffs[key] = performDiff(valA, valB, level+1)
 			if diffs[key].status == DiffStatusSame {
 				// store result and mark as confirmed
-				result.child.a = append(result.child.a, diffs[key])
+				result.children.a = append(result.children.a, diffs[key])
 				foundA[keyA] = struct{}{}
 				foundB[keyB] = struct{}{}
 
@@ -199,7 +203,7 @@ func handleArray(rawA rawRaw, rawB rawRaw) *rawDiff {
 					continue
 				}
 
-				result.child.a = append(result.child.a, diff(nil, v))
+				result.children.a = append(result.children.a, performDiff(nil, v, level+1))
 			}
 
 			break
@@ -212,13 +216,13 @@ func handleArray(rawA rawRaw, rawB rawRaw) *rawDiff {
 					continue
 				}
 
-				result.child.a = append(result.child.a, diff(v, nil))
+				result.children.a = append(result.children.a, performDiff(v, nil, level+1))
 			}
 
 			break
 		}
 
-		smallestDiff := &rawDiff{diffCount: 100000} // FIXME
+		smallestDiff := &diff{diffCount: 100000} // FIXME
 		smallestKeyA := 0
 		smallestKeyB := 0
 
@@ -245,13 +249,13 @@ func handleArray(rawA rawRaw, rawB rawRaw) *rawDiff {
 			}
 		}
 
-		result.child.a = append(result.child.a, smallestDiff)
+		result.children.a = append(result.children.a, smallestDiff)
 		foundA[smallestKeyA] = struct{}{}
 		foundB[smallestKeyB] = struct{}{}
 	}
 
 	sum := 0
-	for _, v := range result.child.a {
+	for _, v := range result.children.a {
 		sum += v.diffCount
 	}
 	result.diffCount = sum
@@ -259,10 +263,11 @@ func handleArray(rawA rawRaw, rawB rawRaw) *rawDiff {
 	return result
 }
 
-func handlePrimitive(rawA rawRaw, rawB rawRaw) *rawDiff {
-	result := &rawDiff{
-		a: rawA,
-		b: rawB,
+func handlePrimitive(rawA rawType, rawB rawType, level int) *diff {
+	result := &diff{
+		a:         rawA,
+		b:         rawB,
+		treeLevel: level,
 	}
 
 	strA := []rune(fmt.Sprint(rawA))
@@ -313,13 +318,13 @@ func handlePrimitive(rawA rawRaw, rawB rawRaw) *rawDiff {
 	return result
 }
 
-func tryMap(x rawRaw) (rawMap, bool) {
+func tryMap(x rawType) (rawTypeMap, bool) {
 	m, ok := x.(map[string]interface{})
 
 	return m, ok
 }
 
-func tryArray(x rawRaw) (rawArray, bool) {
+func tryArray(x rawType) (rawTypeArray, bool) {
 	a, ok := x.([]interface{})
 
 	return a, ok
