@@ -1,186 +1,136 @@
 package yamldiff
 
-import (
-	"sort"
-	"strings"
-
-	"github.com/google/go-cmp/cmp"
-)
-
 type DiffStatus int
 
 const (
-	DiffStatusExists   DiffStatus = 1
-	DiffStatusSame     DiffStatus = 2
+	DiffStatusUnknown  DiffStatus = 0
+	DiffStatusSame     DiffStatus = 1
+	DiffStatusDiff     DiffStatus = 2
 	DiffStatus1Missing DiffStatus = 3
 	DiffStatus2Missing DiffStatus = 4
 )
 
-type Diff struct {
-	Diff      string
-	difflines int
-
-	Yaml1Struct *RawYaml
-	Yaml2Struct *RawYaml
-
-	Status DiffStatus
+type YamlDiff struct {
+	rawA   *RawYaml
+	rawB   *RawYaml
+	result interface{} // should be same structure with rawA but nested YamlDiff if tree
 }
 
-type Diffs []*Diff
+type rawRaw = interface{}
+type rawMap = map[string]rawRaw
+type rawSlice = []rawRaw
 
-func Do(list1 RawYamlList, list2 RawYamlList) Diffs {
-	result := make(Diffs, 0, len(list1))
+type rawDiff struct {
+	a     rawRaw
+	b     rawRaw
+	child *diffChildren
 
-	checked := map[string]struct{}{} // RawYaml.id => struct{}
+	status DiffStatus
+}
 
-	matchFuncs := []func([]*Diff) *Diff{
-		func(diffs []*Diff) *Diff {
-			for _, d := range diffs {
-				if d.Status == DiffStatusSame {
-					return d
-				}
-			}
+type diffChildren struct {
+	a []*rawDiff
+	m map[string]*rawDiff
+}
 
-			return nil
-		},
-		func(diffs []*Diff) *Diff {
-			sort.Slice(diffs, func(i, j int) bool {
-				return diffs[i].difflines < diffs[j].difflines
-			})
-
-			return diffs[0]
-		},
+// TODO: array support
+func diff(rawA rawRaw, rawB rawRaw) *rawDiff {
+	result := &rawDiff{
+		a: rawA,
+		b: rawB,
 	}
+	mapA, mapAok := tryMap(rawA)
+	mapB, mapBok := tryMap(rawB)
 
-	for _, matchFunc := range matchFuncs {
-		for _, yaml1 := range list1 {
-			if _, ok := checked[yaml1.id]; ok {
-				continue
-			}
+	// if A is map
+	if mapAok {
+		// if B is not map -> it's different data
+		if !mapBok {
+			result.status = DiffStatusDiff
 
-			diffs := make([]*Diff, 0, len(list2))
+			return result
+		}
 
-			for _, yaml2 := range list2 {
-				if _, ok := checked[yaml2.id]; ok {
+		result.child = &diffChildren{
+			m: map[string]*rawDiff{},
+		}
+
+		// if B is map -> check the same key children
+		for keyA, valA := range mapA {
+			foundKey := false
+			for keyB, valB := range mapB {
+				if keyA != keyB {
 					continue
 				}
 
-				s := &Diff{
-					Diff:        adjustFormat(cmp.Diff(yaml1.Raw, yaml2.Raw)),
-					Yaml1Struct: yaml1,
-					Yaml2Struct: yaml2,
-					Status:      DiffStatusExists,
+				result.child.m[keyA] = diff(valA, valB)
+				foundKey = true
+
+				break
+			}
+
+			if !foundKey {
+				result.child.m[keyA] = &rawDiff{
+					a:      valA,
+					status: DiffStatus2Missing,
+				}
+			}
+		}
+
+		// finding missing keyA
+		for keyB, valB := range mapB {
+			foundKey := false
+			for keyA, _ := range mapA {
+				if keyB != keyA {
+					continue
 				}
 
-				if len(strings.TrimSpace(s.Diff)) < 1 {
-					s.Status = DiffStatusSame
-					s.Diff = createSameFormat(yaml1, s.Status)
-				} else {
-					for _, str := range strings.Split(s.Diff, "\n") {
-						trimmedstr := strings.TrimSpace(str)
-						if strings.HasPrefix(trimmedstr, "+") || strings.HasPrefix(str, "-") {
-							s.difflines++
-						}
-					}
+				foundKey = true
+
+				break
+			}
+
+			if !foundKey {
+				result.child.m[keyB] = &rawDiff{
+					b:      valB,
+					status: DiffStatus1Missing,
 				}
-
-				diffs = append(diffs, s)
 			}
-
-			if len(diffs) == 0 {
-				continue
-			}
-
-			d := matchFunc(diffs)
-			if d == nil {
-				continue
-			}
-
-			result = append(result, d)
-			checked[d.Yaml1Struct.id] = struct{}{}
-			checked[d.Yaml2Struct.id] = struct{}{}
-		}
-	}
-
-	// check the unmarked items in list1
-	for _, yaml1 := range list1 {
-		if _, ok := checked[yaml1.id]; ok {
-			continue
 		}
 
-		result = append(
-			result,
-			&Diff{
-				Diff:        createSameFormat(yaml1, DiffStatus2Missing),
-				Yaml1Struct: yaml1,
-				Status:      DiffStatus2Missing,
-			},
-		)
+		result.status = DiffStatusUnknown
+
+		return result
 	}
 
-	for _, yaml2 := range list2 {
-		if _, ok := checked[yaml2.id]; ok {
-			continue
+	// if A is not map but B is map -> it's different data
+	if !mapAok && mapBok {
+		result.status = DiffStatusDiff
+
+		return result
+	}
+
+	// if A and B is not map -> int/float/string
+	if !mapAok && !mapBok {
+		switch {
+		case rawA == rawB:
+			result.status = DiffStatusSame
+		case rawA == nil:
+			result.status = DiffStatus1Missing
+		case rawB == nil:
+			result.status = DiffStatus2Missing
+		default:
+			result.status = DiffStatusDiff
 		}
 
-		result = append(
-			result,
-			&Diff{
-				Diff:        createSameFormat(yaml2, DiffStatus1Missing),
-				Yaml2Struct: yaml2,
-				Status:      DiffStatus1Missing,
-			},
-		)
+		return result
 	}
 
+	// unexpected case
 	return result
 }
 
-func createSameFormat(y *RawYaml, status DiffStatus) string {
-	result := strings.Builder{}
-
-	prefix := ""
-	switch status {
-	case DiffStatusSame:
-		prefix = "  "
-	case DiffStatus1Missing:
-		prefix = "+ "
-	case DiffStatus2Missing:
-		prefix = "- "
-	}
-
-	diff := cmp.Diff(y.Raw, struct{}{})
-
-	for _, str := range strings.Split(diff, "\n") {
-		if !strings.HasPrefix(str, "-") {
-			continue
-		}
-
-		// TODO: cmp.Diff is unstable use custom Reporter
-		str = strings.TrimSpace(str)
-		str = strings.Replace(str, "- 	", "", 1)
-		str = strings.Replace(str, "- 	", "", 1)
-
-		result.WriteString(prefix)
-		result.WriteString(str)
-		result.WriteRune('\n')
-	}
-
-	return adjustFormat(strings.TrimSuffix(result.String(), ",\n")) + "\n"
-}
-
-func adjustFormat(s string) string {
-	for ss, rr := range map[string]string{
-		`map[string]interface{}`: "Map",
-		`map[String]interface{}`: "Map",
-		`[]interface{}`:          "List",
-		`uint64`:                 "Number",
-		`int64`:                  "Number",
-		`string`:                 "String",
-		`bool`:                   "Boolean",
-	} {
-		s = strings.ReplaceAll(s, ss, rr)
-	}
-
-	return s
+func tryMap(x rawRaw) (rawMap, bool) {
+	mapp, ok := x.(map[string]interface{})
+	return mapp, ok
 }
