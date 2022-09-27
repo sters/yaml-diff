@@ -28,19 +28,19 @@ $ go run cmd/yaml-diff/main.go example/a.yaml example/b.yaml
 --- example/a.yaml
 +++ example/b.yaml
 
+  apiVersion: "v1"
+  kind: "Service"
+  metadata:
+    name: "my-service"
   spec:
     selector:
       app: "MyApp"
     ports:
       -
+        protocol: "TCP"
 -       port: 80
 +       port: 8080
         targetPort: 9376
-        protocol: "TCP"
-  apiVersion: "v1"
-  kind: "Service"
-  metadata:
-    name: "my-service"
 
   apiVersion: "apps/v1"
   kind: "Deployment"
@@ -49,6 +49,8 @@ $ go run cmd/yaml-diff/main.go example/a.yaml example/b.yaml
     labels:
       app: "MyApp"
   spec:
+-   replicas: 3
++   replicas: 10
     selector:
       matchLabels:
         app: "MyApp"
@@ -65,8 +67,6 @@ $ go run cmd/yaml-diff/main.go example/a.yaml example/b.yaml
             ports:
               -
                 containerPort: 9376
--   replicas: 3
-+   replicas: 10
 
 - foo: "missing-in-b"
 
@@ -88,32 +88,28 @@ $ go run cmd/yaml-diff/main.go example/b.yaml example/a.yaml
 --- example/b.yaml
 +++ example/a.yaml
 
+  metadata:
+    name: "my-service"
   spec:
-    selector:
-      app: "MyApp"
     ports:
       -
         protocol: "TCP"
+        targetPort: 9376
 -       port: 8080
 +       port: 80
-        targetPort: 9376
+    selector:
+      app: "MyApp"
   apiVersion: "v1"
   kind: "Service"
-  metadata:
-    name: "my-service"
 
   apiVersion: "apps/v1"
   kind: "Deployment"
-  metadata:
-    name: "app-deployment"
-    labels:
-      app: "MyApp"
   spec:
--   replicas: 10
-+   replicas: 3
     selector:
       matchLabels:
         app: "MyApp"
+-   replicas: 10
++   replicas: 3
     template:
       metadata:
         labels:
@@ -122,11 +118,15 @@ $ go run cmd/yaml-diff/main.go example/b.yaml example/a.yaml
         containers:
           -
             name: "app"
--           image: "my-app:1.1.0"
-+           image: "my-app:1.0.0"
             ports:
               -
                 containerPort: 9376
+-           image: "my-app:1.1.0"
++           image: "my-app:1.0.0"
+  metadata:
+    name: "app-deployment"
+    labels:
+      app: "MyApp"
 
 - bar:
 -   - "missing in a.yaml"

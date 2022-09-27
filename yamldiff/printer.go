@@ -4,11 +4,18 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/goccy/go-yaml"
 )
 
 const (
 	indentString = "  "
 )
+
+type sortedChildItem struct {
+	k string
+	v *diff
+}
 
 func indent(level int) string {
 	return strings.Repeat(indentString, level)
@@ -128,24 +135,69 @@ func (d *diff) dump(b io.Writer, level int) {
 		}
 
 		if d.children.m != nil {
-			for k, v := range d.children.m {
-				if v.children != nil && (v.children.a != nil || v.children.m != nil) {
-					fmt.Fprintf(b, "  %s%s:\n", indent(level), k)
-					v.dump(b, level+1)
+			sortedChildren := []*sortedChildItem{}
+			checked := map[string]struct{}{}
+
+			aMap, ok := tryMap(d.a)
+			if !ok {
+				aMap = yaml.MapSlice{}
+			}
+			for _, r := range aMap {
+				for k, v := range d.children.m {
+					if _, ok := checked[k]; ok {
+						continue
+					}
+					if r.Key != k {
+						continue
+					}
+
+					sortedChildren = append(sortedChildren, &sortedChildItem{
+						k: k,
+						v: v,
+					})
+					checked[k] = struct{}{}
+				}
+			}
+
+			bMap, ok := tryMap(d.b)
+			if !ok {
+				bMap = yaml.MapSlice{}
+			}
+			for _, r := range bMap {
+				for k, v := range d.children.m {
+					if _, ok := checked[k]; ok {
+						continue
+					}
+					if r.Key != k {
+						continue
+					}
+
+					sortedChildren = append(sortedChildren, &sortedChildItem{
+						k: k,
+						v: v,
+					})
+					checked[k] = struct{}{}
+				}
+			}
+
+			for _, r := range sortedChildren {
+				if r.v.children != nil && (r.v.children.a != nil || r.v.children.m != nil) {
+					fmt.Fprintf(b, "  %s%s:\n", indent(level), r.k)
+					r.v.dump(b, level+1)
 
 					continue
 				}
 
-				switch v.status {
+				switch r.v.status {
 				case diffStatusSame:
-					dumpMapItem(b, " ", level, k, v.a)
+					dumpMapItem(b, " ", level, r.k, r.v.a)
 				case diffStatusDiff:
-					dumpMapItem(b, "-", level, k, v.a)
-					dumpMapItem(b, "+", level, k, v.b)
+					dumpMapItem(b, "-", level, r.k, r.v.a)
+					dumpMapItem(b, "+", level, r.k, r.v.b)
 				case diffStatus1Missing:
-					dumpMapItem(b, "+", level, k, v.b)
+					dumpMapItem(b, "+", level, r.k, r.v.b)
 				case diffStatus2Missing:
-					dumpMapItem(b, "-", level, k, v.a)
+					dumpMapItem(b, "-", level, r.k, r.v.a)
 				}
 			}
 		}
