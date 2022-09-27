@@ -1,6 +1,10 @@
 package yamldiff
 
-import "fmt"
+import (
+	"fmt"
+
+	"gopkg.in/yaml.v2"
+)
 
 type DiffStatus int
 
@@ -14,7 +18,7 @@ const (
 
 type (
 	rawType      = interface{}
-	rawTypeMap   = map[string]rawType
+	rawTypeMap   = yaml.MapSlice
 	rawTypeArray = []rawType
 
 	diff struct {
@@ -85,14 +89,24 @@ func handleMap(rawA rawType, rawB rawType, level int) *diff {
 	result.status = DiffStatusSame
 
 	// if B is map -> check the same key children
-	for keyA, valA := range mapA {
+	for _, valA := range mapA {
+		keyA, ok := valA.Key.(string)
+		if !ok {
+			keyA = "000_unexpected-key_000"
+		}
+
 		foundKey := false
-		for keyB, valB := range mapB {
+		for _, valB := range mapB {
+			keyB, ok := valB.Key.(string)
+			if !ok {
+				keyB = "000_unexpected-key_000"
+			}
+
 			if keyA != keyB {
 				continue
 			}
 
-			result.children.m[keyA] = performDiff(valA, valB, level+1)
+			result.children.m[keyA] = performDiff(valA.Value, valB.Value, level+1)
 			if result.children.m[keyA].status != DiffStatusSame {
 				result.status = DiffStatusDiff // top level diff can't specify actual reason
 			}
@@ -103,15 +117,25 @@ func handleMap(rawA rawType, rawB rawType, level int) *diff {
 		}
 
 		if !foundKey {
-			result.children.m[keyA] = performDiff(valA, nil, level+1)
+			result.children.m[keyA] = performDiff(valA.Value, nil, level+1)
 			result.status = DiffStatusDiff // top level diff can't specify actual reason
 		}
 	}
 
 	// finding missing keyA
-	for keyB, valB := range mapB {
+	for _, valB := range mapB {
+		keyB, ok := valB.Key.(string)
+		if !ok {
+			keyB = "000_unexpected-key_000"
+		}
+
 		foundKey := false
-		for keyA := range mapA {
+		for _, valA := range mapA {
+			keyA, ok := valA.Key.(string)
+			if !ok {
+				keyA = "000_unexpected-key_000"
+			}
+
 			if keyB != keyA {
 				continue
 			}
@@ -122,7 +146,7 @@ func handleMap(rawA rawType, rawB rawType, level int) *diff {
 		}
 
 		if !foundKey {
-			result.children.m[keyB] = performDiff(nil, valB, level+1)
+			result.children.m[keyB] = performDiff(nil, valB.Value, level+1)
 			result.status = DiffStatusDiff // top level diff can't specify actual reason
 		}
 	}
@@ -319,7 +343,13 @@ func handlePrimitive(rawA rawType, rawB rawType, level int) *diff {
 }
 
 func tryMap(x rawType) (rawTypeMap, bool) {
-	m, ok := x.(map[string]interface{})
+	m, ok := x.(yaml.MapSlice)
+
+	return m, ok
+}
+
+func tryMapItem(x rawType) (yaml.MapItem, bool) {
+	m, ok := x.(yaml.MapItem)
 
 	return m, ok
 }

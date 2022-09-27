@@ -31,7 +31,12 @@ func dumpData(b io.Writer, diffPrefix string, level int, v rawType) {
 }
 
 func dumpMap(b io.Writer, diffPrefix string, level int, m rawTypeMap) {
-	for k, v := range m {
+	for _, v := range m {
+		k, ok := v.Key.(string)
+		if !ok {
+			k = ""
+		}
+
 		dumpMapItem(b, diffPrefix, level, k, v)
 	}
 }
@@ -71,6 +76,12 @@ func dumpMapItem(b io.Writer, diffPrefix string, level int, k string, v rawType)
 	if t, ok := tryArray(v); ok {
 		fmt.Fprintf(b, "%s %s%s:\n", diffPrefix, indent(level), k)
 		dumpData(b, diffPrefix, level+1, t)
+
+		return
+	}
+
+	if t, ok := tryMapItem(v); ok {
+		fmt.Fprintf(b, "%s %s%s: %#v\n", diffPrefix, indent(level), k, t.Value)
 
 		return
 	}

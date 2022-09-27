@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v2"
 )
 
 func Test_diff_Dump(t *testing.T) {
@@ -134,16 +135,16 @@ func Test_diff_Dump(t *testing.T) {
 						m: diffChildrenMap{
 							"foo": {
 								a: rawTypeMap{
-									"bar":  "baz",
-									"baz":  1,
-									"barr": false,
+									yaml.MapItem{Key: "bar", Value: "baz"},
+									yaml.MapItem{Key: "baz", Value: 1},
+									yaml.MapItem{Key: "barr", Value: false},
 								},
 								b: rawTypeMap{
-									"bar": "baz",
-									"baz": rawTypeMap{
-										"a": "b",
-									},
-									"bazz": 1,
+									yaml.MapItem{Key: "bar", Value: "baz"},
+									yaml.MapItem{Key: "baz", Value: rawTypeMap{
+										yaml.MapItem{Key: "a", Value: "b"},
+									}},
+									yaml.MapItem{Key: "bazz", Value: 1},
 								},
 								children: &diffChildren{
 									m: diffChildrenMap{
@@ -156,7 +157,7 @@ func Test_diff_Dump(t *testing.T) {
 										"baz": {
 											a: 1,
 											b: rawTypeMap{
-												"a": "b",
+												yaml.MapItem{Key: "a", Value: "b"},
 											},
 											status:    DiffStatusDiff,
 											diffCount: len("map[a:b]"),
@@ -176,7 +177,7 @@ func Test_diff_Dump(t *testing.T) {
 										},
 									},
 								},
-								diffCount: (len("map[a:b]")) + (5) + (1),
+								diffCount: (len("[{a b}]")) + (5) + (1),
 								status:    DiffStatusDiff,
 								treeLevel: 1,
 							},
@@ -208,7 +209,7 @@ func Test_diff_Dump(t *testing.T) {
 							},
 						},
 					},
-					diffCount: ((len("map[a:b]")) + (5) + (1)) + (0) + (0) + (1) + (1),
+					diffCount: ((len("[{a b}]")) + (5) + (1)) + (0) + (0) + (1) + (1),
 					status:    DiffStatusDiff,
 				},
 				want: `
@@ -330,16 +331,13 @@ func Test_diff_Dump(t *testing.T) {
 	for n, tt := range tests {
 		tt := tt
 		t.Run(n, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			for n, tc := range tt {
 				tc := tc
 				t.Run(n, func(t *testing.T) {
-					t.Parallel()
+					// t.Parallel()
 
-					// FIXME: workaround for unstable golang's map
-					// Instead, use this yaml.MapSlice
-					// https://github.com/goccy/go-yaml/blob/894a764b31ce8c62a845a1e626cd43c6bb475a7a/yaml.go#L66
 					gotSorted := strings.Split(tc.d.Dump(), "\n")
 					sort.SliceStable(gotSorted, func(i, j int) bool { return gotSorted[i] < gotSorted[j] })
 

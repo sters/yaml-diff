@@ -3,7 +3,6 @@ package yamldiff
 import (
 	"crypto/rand"
 	"fmt"
-	"log"
 	"math"
 	"math/big"
 	"strings"
@@ -32,14 +31,14 @@ func randInt() int64 {
 	return n.Int64()
 }
 
-func Load(s string) RawYamlList {
+func Load(s string) (RawYamlList, error) {
 	yamls := strings.Split(s, "\n---\n")
 
 	results := make(RawYamlList, 0, len(yamls))
 	for _, y := range yamls {
 		var out interface{}
-		if err := yaml.Unmarshal([]byte(y), &out); err != nil {
-			log.Fatalf("f1, %+v", err)
+		if err := yaml.UnmarshalWithOptions([]byte(y), &out, yaml.UseOrderedMap()); err != nil {
+			return nil, fmt.Errorf("yamldiff: failed to unmarshal yaml: %+s", err)
 		}
 		results = append(
 			results,
@@ -47,5 +46,5 @@ func Load(s string) RawYamlList {
 		)
 	}
 
-	return results
+	return results, nil
 }

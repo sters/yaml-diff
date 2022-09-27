@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v2"
 )
 
 func Test_performDiff(t *testing.T) {
@@ -219,10 +220,10 @@ func Test_performDiff(t *testing.T) {
 		"map": {
 			"simple same": {
 				a: rawTypeMap{
-					"foo": "bar",
+					yaml.MapItem{Key: "foo", Value: "bar"},
 				},
 				b: rawTypeMap{
-					"foo": "bar",
+					yaml.MapItem{Key: "foo", Value: "bar"},
 				},
 				want: &diff{
 					children: &diffChildren{
@@ -240,10 +241,10 @@ func Test_performDiff(t *testing.T) {
 			},
 			"simple diff": {
 				a: rawTypeMap{
-					"foo": "bar",
+					yaml.MapItem{Key: "foo", Value: "bar"},
 				},
 				b: rawTypeMap{
-					"foo": "baz",
+					yaml.MapItem{Key: "foo", Value: "baz"},
 				},
 				want: &diff{
 					children: &diffChildren{
@@ -263,10 +264,10 @@ func Test_performDiff(t *testing.T) {
 			},
 			"simple diff type": {
 				a: rawTypeMap{
-					"foo": "bar",
+					yaml.MapItem{Key: "foo", Value: "bar"},
 				},
 				b: rawTypeMap{
-					"foo": 1,
+					yaml.MapItem{Key: "foo", Value: 1},
 				},
 				want: &diff{
 					children: &diffChildren{
@@ -286,11 +287,15 @@ func Test_performDiff(t *testing.T) {
 			},
 			"simple diff type map and primitive": {
 				a: rawTypeMap{
-					"foo": "bar",
+					yaml.MapItem{Key: "foo", Value: "bar"},
 				},
 				b: rawTypeMap{
-					"foo": rawTypeMap{
-						"bar": "baz",
+					yaml.MapItem{
+						Key: "foo",
+						Value: yaml.MapItem{
+							Key:   "bar",
+							Value: "baz",
+						},
 					},
 				},
 				want: &diff{
@@ -298,58 +303,65 @@ func Test_performDiff(t *testing.T) {
 						m: diffChildrenMap{
 							"foo": {
 								a: "bar",
-								b: rawTypeMap{
-									"bar": "baz",
+								b: yaml.MapItem{
+									Key:   "bar",
+									Value: "baz",
 								},
-								diffCount: len("map[bar:baz]"), // as primitive diff
+								diffCount: len("{bar baz}"), // as primitive diff
 								status:    DiffStatusDiff,
 								treeLevel: 1,
 							},
 						},
 					},
 
-					diffCount: len("map[bar:baz]"), // from child
+					diffCount: len("{bar baz}"), // from child
 					status:    DiffStatusDiff,
 				},
 			},
 			"complicated": {
 				a: rawTypeMap{
-					"foo": rawTypeMap{
-						"bar":  "baz",
-						"baz":  1,
-						"barr": false,
+					yaml.MapItem{
+						Key: "foo",
+						Value: rawTypeMap{
+							yaml.MapItem{Key: "bar", Value: "baz"},
+							yaml.MapItem{Key: "baz", Value: 1},
+							yaml.MapItem{Key: "barr", Value: false},
+						},
 					},
-					"bar": 1,
-					"baz": "1",
-					"zoo": 1,
+					yaml.MapItem{Key: "bar", Value: 1},
+					yaml.MapItem{Key: "baz", Value: "1"},
+					yaml.MapItem{Key: "zoo", Value: 1},
 				},
 				b: rawTypeMap{
-					"foo": rawTypeMap{
-						"bar": "baz",
-						"baz": rawTypeMap{
-							"a": "b",
+					yaml.MapItem{
+						Key: "foo",
+						Value: rawTypeMap{
+							yaml.MapItem{Key: "bar", Value: "baz"},
+							yaml.MapItem{Key: "baz", Value: rawTypeMap{
+								yaml.MapItem{Key: "a", Value: "b"},
+							}},
+							yaml.MapItem{Key: "bazz", Value: 1},
 						},
-						"bazz": 1,
 					},
-					"bar": "1",
-					"baz": 1,
-					"boo": 1,
+					yaml.MapItem{Key: "bar", Value: "1"},
+					yaml.MapItem{Key: "baz", Value: 1},
+					yaml.MapItem{Key: "boo", Value: 1},
 				},
 				want: &diff{
 					children: &diffChildren{
 						m: diffChildrenMap{
 							"foo": {
 								a: rawTypeMap{
-									"bar":  "baz",
-									"baz":  1,
-									"barr": false,
+									yaml.MapItem{Key: "bar", Value: "baz"},
+									yaml.MapItem{Key: "baz", Value: 1},
+									yaml.MapItem{Key: "barr", Value: false},
 								},
 								b: rawTypeMap{
-									"bar": "baz",
-									"baz": rawTypeMap{
-										"a": "b",
-									},
-									"bazz": 1,
+									yaml.MapItem{Key: "bar", Value: "baz"},
+									yaml.MapItem{Key: "baz", Value: rawTypeMap{
+										yaml.MapItem{Key: "a", Value: "b"},
+									}},
+									yaml.MapItem{Key: "bazz", Value: 1},
 								},
 								children: &diffChildren{
 									m: diffChildrenMap{
@@ -362,10 +374,10 @@ func Test_performDiff(t *testing.T) {
 										"baz": {
 											a: 1,
 											b: rawTypeMap{
-												"a": "b",
+												yaml.MapItem{Key: "a", Value: "b"},
 											},
 											status:    DiffStatusDiff,
-											diffCount: len("map[a:b]"),
+											diffCount: len("[{a b}]"),
 											treeLevel: 2,
 										},
 										"barr": {
@@ -382,7 +394,7 @@ func Test_performDiff(t *testing.T) {
 										},
 									},
 								},
-								diffCount: (len("map[a:b]")) + (5) + (1),
+								diffCount: (len("[{a b}]")) + (5) + (1),
 								status:    DiffStatusDiff,
 								treeLevel: 1,
 							},
@@ -414,7 +426,7 @@ func Test_performDiff(t *testing.T) {
 							},
 						},
 					},
-					diffCount: ((len("map[a:b]")) + (5) + (1)) + (0) + (0) + (1) + (1),
+					diffCount: ((len("[{a b}]")) + (5) + (1)) + (0) + (0) + (1) + (1),
 					status:    DiffStatusDiff,
 				},
 			},
@@ -423,12 +435,12 @@ func Test_performDiff(t *testing.T) {
 	for n, tt := range tests {
 		tt := tt
 		t.Run(n, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			for n, tc := range tt {
 				tc := tc
 				t.Run(n, func(t *testing.T) {
-					t.Parallel()
+					// t.Parallel()
 
 					got := performDiff(tc.a, tc.b, 0)
 
