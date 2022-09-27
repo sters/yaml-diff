@@ -81,7 +81,7 @@ $ go run cmd/yaml-diff/main.go example/a.yaml example/b.yaml
 +   - "missing in a.yaml"
 ```
 
-Even if reverse specify, it also worked properly.
+Even if it reverse order, it also worked properly.
 
 ```text
 $ go run cmd/yaml-diff/main.go example/b.yaml example/a.yaml
