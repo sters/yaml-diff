@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-
-	"github.com/goccy/go-yaml"
 )
 
 const (
@@ -111,96 +109,8 @@ func dumpPrimitive(b io.Writer, diffPrefix string, level int, somethingPrefix st
 
 func (d *diff) dump(b io.Writer, level int) {
 	if d.children != nil {
-		if d.children.a != nil {
-			for _, v := range d.children.a {
-				if v.children != nil && (v.children.a != nil || v.children.m != nil) {
-					fmt.Fprintf(b, "  %s- \n", indent(level))
-					v.dump(b, level+1)
-
-					continue
-				}
-
-				switch v.status {
-				case diffStatusSame:
-					dumpArrayItem(b, " ", level, v.a)
-				case diffStatusDiff:
-					dumpArrayItem(b, "-", level, v.a)
-					dumpArrayItem(b, "+", level, v.b)
-				case diffStatus1Missing:
-					dumpArrayItem(b, "+", level, v.b)
-				case diffStatus2Missing:
-					dumpArrayItem(b, "-", level, v.a)
-				}
-			}
-		}
-
-		if d.children.m != nil {
-			sortedChildren := []*sortedChildItem{}
-			checked := map[string]struct{}{}
-
-			aMap, ok := tryMap(d.a)
-			if !ok {
-				aMap = yaml.MapSlice{}
-			}
-			for _, r := range aMap {
-				for k, v := range d.children.m {
-					if _, ok := checked[k]; ok {
-						continue
-					}
-					if r.Key != k {
-						continue
-					}
-
-					sortedChildren = append(sortedChildren, &sortedChildItem{
-						k: k,
-						v: v,
-					})
-					checked[k] = struct{}{}
-				}
-			}
-
-			bMap, ok := tryMap(d.b)
-			if !ok {
-				bMap = yaml.MapSlice{}
-			}
-			for _, r := range bMap {
-				for k, v := range d.children.m {
-					if _, ok := checked[k]; ok {
-						continue
-					}
-					if r.Key != k {
-						continue
-					}
-
-					sortedChildren = append(sortedChildren, &sortedChildItem{
-						k: k,
-						v: v,
-					})
-					checked[k] = struct{}{}
-				}
-			}
-
-			for _, r := range sortedChildren {
-				if r.v.children != nil && (r.v.children.a != nil || r.v.children.m != nil) {
-					fmt.Fprintf(b, "  %s%s:\n", indent(level), r.k)
-					r.v.dump(b, level+1)
-
-					continue
-				}
-
-				switch r.v.status {
-				case diffStatusSame:
-					dumpMapItem(b, " ", level, r.k, r.v.a)
-				case diffStatusDiff:
-					dumpMapItem(b, "-", level, r.k, r.v.a)
-					dumpMapItem(b, "+", level, r.k, r.v.b)
-				case diffStatus1Missing:
-					dumpMapItem(b, "+", level, r.k, r.v.b)
-				case diffStatus2Missing:
-					dumpMapItem(b, "-", level, r.k, r.v.a)
-				}
-			}
-		}
+		d.dumpTryArray(b, level)
+		d.dumpTryMap(b, level)
 
 		return
 	}
@@ -215,6 +125,101 @@ func (d *diff) dump(b io.Writer, level int) {
 		dumpData(b, "+", level, d.b)
 	case diffStatus2Missing:
 		dumpData(b, "-", level, d.a)
+	}
+}
+
+func (d *diff) dumpTryArray(b io.Writer, level int) {
+	if d.children.a == nil {
+		return
+	}
+
+	for _, v := range d.children.a {
+		if v.children != nil && (v.children.a != nil || v.children.m != nil) {
+			fmt.Fprintf(b, "  %s- \n", indent(level))
+			v.dump(b, level+1)
+
+			continue
+		}
+
+		switch v.status {
+		case diffStatusSame:
+			dumpArrayItem(b, " ", level, v.a)
+		case diffStatusDiff:
+			dumpArrayItem(b, "-", level, v.a)
+			dumpArrayItem(b, "+", level, v.b)
+		case diffStatus1Missing:
+			dumpArrayItem(b, "+", level, v.b)
+		case diffStatus2Missing:
+			dumpArrayItem(b, "-", level, v.a)
+		}
+	}
+}
+
+func (d *diff) dumpTryMap(b io.Writer, level int) {
+	if d.children.m == nil {
+		return
+	}
+
+	sortedChildren := []*sortedChildItem{}
+	checked := map[string]struct{}{}
+
+	appendSorted := func(r interface{}) {
+		m, ok := tryMap(r)
+		if !ok {
+			return
+		}
+
+		for _, r := range m {
+			for k, v := range d.children.m {
+				if _, ok := checked[k]; ok {
+					continue
+				}
+				if r.Key != k {
+					continue
+				}
+
+				sortedChildren = append(sortedChildren, &sortedChildItem{
+					k: k,
+					v: v,
+				})
+				checked[k] = struct{}{}
+			}
+		}
+	}
+
+	appendSorted(d.a)
+	appendSorted(d.b)
+
+	for k, v := range d.children.m {
+		if _, ok := checked[k]; ok {
+			continue
+		}
+
+		sortedChildren = append(sortedChildren, &sortedChildItem{
+			k: k,
+			v: v,
+		})
+	}
+
+	for _, r := range sortedChildren {
+		if r.v.children != nil && (r.v.children.a != nil || r.v.children.m != nil) {
+			fmt.Fprintf(b, "  %s%s:\n", indent(level), r.k)
+			r.v.dump(b, level+1)
+
+			continue
+		}
+
+		switch r.v.status {
+		case diffStatusSame:
+			dumpMapItem(b, " ", level, r.k, r.v.a)
+		case diffStatusDiff:
+			dumpMapItem(b, "-", level, r.k, r.v.a)
+			dumpMapItem(b, "+", level, r.k, r.v.b)
+		case diffStatus1Missing:
+			dumpMapItem(b, "+", level, r.k, r.v.b)
+		case diffStatus2Missing:
+			dumpMapItem(b, "-", level, r.k, r.v.a)
+		}
 	}
 }
 
