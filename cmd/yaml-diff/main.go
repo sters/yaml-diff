@@ -30,7 +30,7 @@ func main() {
 
 	fmt.Printf("--- %s\n+++ %s\n\n", file1, file2)
 	for _, diff := range yamldiff.Do(yamls1, yamls2) {
-		fmt.Println(diff.Diff)
+		fmt.Println(diff.Dump())
 	}
 
 	fmt.Print()

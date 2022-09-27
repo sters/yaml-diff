@@ -3,7 +3,7 @@ package yamldiff
 import (
 	"fmt"
 
-	"gopkg.in/yaml.v2"
+	"github.com/goccy/go-yaml"
 )
 
 type DiffStatus int
@@ -14,6 +14,8 @@ const (
 	DiffStatusDiff     DiffStatus = 2
 	DiffStatus1Missing DiffStatus = 3
 	DiffStatus2Missing DiffStatus = 4
+
+	missingKey = "000_unexpected-key_000"
 )
 
 type (
@@ -57,7 +59,6 @@ func performDiff(rawA rawType, rawB rawType, level int) *diff {
 	return handlePrimitive(rawA, rawB, level)
 }
 
-// TODO: golang's map is not stable
 func handleMap(rawA rawType, rawB rawType, level int) *diff {
 	result := &diff{
 		a:         rawA,
@@ -92,14 +93,14 @@ func handleMap(rawA rawType, rawB rawType, level int) *diff {
 	for _, valA := range mapA {
 		keyA, ok := valA.Key.(string)
 		if !ok {
-			keyA = "000_unexpected-key_000"
+			keyA = missingKey
 		}
 
 		foundKey := false
 		for _, valB := range mapB {
 			keyB, ok := valB.Key.(string)
 			if !ok {
-				keyB = "000_unexpected-key_000"
+				keyB = missingKey
 			}
 
 			if keyA != keyB {
@@ -126,14 +127,14 @@ func handleMap(rawA rawType, rawB rawType, level int) *diff {
 	for _, valB := range mapB {
 		keyB, ok := valB.Key.(string)
 		if !ok {
-			keyB = "000_unexpected-key_000"
+			keyB = missingKey
 		}
 
 		foundKey := false
 		for _, valA := range mapA {
 			keyA, ok := valA.Key.(string)
 			if !ok {
-				keyA = "000_unexpected-key_000"
+				keyA = missingKey
 			}
 
 			if keyB != keyA {
@@ -298,6 +299,8 @@ func handlePrimitive(rawA rawType, rawB rawType, level int) *diff {
 	strB := []rune(fmt.Sprint(rawB))
 
 	switch {
+	case rawA == nil && rawB == nil:
+		result.status = DiffStatusSame
 	case rawA == rawB:
 		result.status = DiffStatusSame
 	case rawA == nil:

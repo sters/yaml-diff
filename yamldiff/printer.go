@@ -81,16 +81,25 @@ func dumpMapItem(b io.Writer, diffPrefix string, level int, k string, v rawType)
 	}
 
 	if t, ok := tryMapItem(v); ok {
-		fmt.Fprintf(b, "%s %s%s: %#v\n", diffPrefix, indent(level), k, t.Value)
+		dumpMapItem(b, diffPrefix, level, k, t.Value)
 
 		return
 	}
 
-	fmt.Fprintf(b, "%s %s%s: %#v\n", diffPrefix, indent(level), k, v)
+	switch v.(type) {
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		fmt.Fprintf(b, "%s %s%s: %d\n", diffPrefix, indent(level), k, v)
+	case float32, float64:
+		fmt.Fprintf(b, "%s %s%s: %f\n", diffPrefix, indent(level), k, v)
+	case string:
+		fmt.Fprintf(b, "%s %s%s: %s\n", diffPrefix, indent(level), k, v)
+	default:
+		fmt.Fprintf(b, "%s %s%s: %#v\n", diffPrefix, indent(level), k, v)
+	}
 }
 
 func (d *diff) dump(b io.Writer, level int) {
-	if d.children != nil && (d.children.a != nil || d.children.m != nil) {
+	if d.children != nil {
 		if d.children.a != nil {
 			for _, v := range d.children.a {
 				if v.children != nil && (v.children.a != nil || v.children.m != nil) {

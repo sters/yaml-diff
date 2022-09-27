@@ -11,15 +11,24 @@ linters-settings:
 linters:
   enable-all: true
   disable:
-    - wsl
+    - cyclop
+    - dogsled
+    - dupl
+    - exhaustive
     - exhaustivestruct
     - exhaustruct
-    - exhaustive
-    - godox
     - funlen
-    - gomnd
     - gocognit
-    - cyclop
+    - godox
+    - gomnd
+    - interfacer
+    - ireturn
+    - maintidx
+    - nlreturn
+    - nosnakecase
+    - paralleltest
+    - testpackage
+    - wsl
 
 issues:
   exclude-rules:
@@ -29,3 +38,5 @@ issues:
       linters: ["forbidigo"]
     - text: "is too short for the scope of its usage"
       linters: ["varnamelen"]
+    - text: "has complex nested blocks"
+      linters: ["nestif"]

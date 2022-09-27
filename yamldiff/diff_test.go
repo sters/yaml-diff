@@ -3,8 +3,8 @@ package yamldiff
 import (
 	"testing"
 
+	"github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v2"
 )
 
 func Test_performDiff(t *testing.T) {
