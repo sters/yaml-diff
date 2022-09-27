@@ -1,186 +1,363 @@
 package yamldiff
 
 import (
-	"sort"
-	"strings"
+	"fmt"
 
-	"github.com/google/go-cmp/cmp"
+	"github.com/goccy/go-yaml"
 )
 
-type DiffStatus int
+type diffStatus int
 
 const (
-	DiffStatusExists   DiffStatus = 1
-	DiffStatusSame     DiffStatus = 2
-	DiffStatus1Missing DiffStatus = 3
-	DiffStatus2Missing DiffStatus = 4
+	diffStatusSame     diffStatus = 1
+	diffStatusDiff     diffStatus = 2
+	diffStatus1Missing diffStatus = 3
+	diffStatus2Missing diffStatus = 4
+
+	missingKey = "000_unexpected-key_000"
 )
 
-type Diff struct {
-	Diff      string
-	difflines int
+type (
+	rawType      = interface{}
+	rawTypeMap   = yaml.MapSlice
+	rawTypeArray = []rawType
 
-	Yaml1Struct *RawYaml
-	Yaml2Struct *RawYaml
+	diff struct {
+		a        rawType
+		b        rawType
+		children *diffChildren
 
-	Status DiffStatus
-}
-
-type Diffs []*Diff
-
-func Do(list1 RawYamlList, list2 RawYamlList) Diffs {
-	result := make(Diffs, 0, len(list1))
-
-	checked := map[string]struct{}{} // RawYaml.id => struct{}
-
-	matchFuncs := []func([]*Diff) *Diff{
-		func(diffs []*Diff) *Diff {
-			for _, d := range diffs {
-				if d.Status == DiffStatusSame {
-					return d
-				}
-			}
-
-			return nil
-		},
-		func(diffs []*Diff) *Diff {
-			sort.Slice(diffs, func(i, j int) bool {
-				return diffs[i].difflines < diffs[j].difflines
-			})
-
-			return diffs[0]
-		},
+		status    diffStatus
+		diffCount int
+		treeLevel int
 	}
 
-	for _, matchFunc := range matchFuncs {
-		for _, yaml1 := range list1 {
-			if _, ok := checked[yaml1.id]; ok {
+	diffChildrenArray = []*diff
+	diffChildrenMap   = map[string]*diff
+
+	diffChildren struct {
+		a diffChildrenArray
+		m diffChildrenMap
+	}
+)
+
+func performDiff(rawA rawType, rawB rawType, level int) *diff {
+	if rawA == nil || rawB == nil {
+		return handlePrimitive(rawA, rawB, level)
+	}
+
+	if r := handleMap(rawA, rawB, level); r != nil {
+		return r
+	}
+
+	if r := handleArray(rawA, rawB, level); r != nil {
+		return r
+	}
+
+	// other case -> handle as primitive (int/float/bool/string)
+	return handlePrimitive(rawA, rawB, level)
+}
+
+func handleMap(rawA rawType, rawB rawType, level int) *diff {
+	result := &diff{
+		a:         rawA,
+		b:         rawB,
+		treeLevel: level,
+	}
+
+	mapA, mapAok := tryMap(rawA)
+	mapB, mapBok := tryMap(rawB)
+
+	// if both are not map
+	if !mapAok && !mapBok {
+		return nil
+	}
+
+	// if A is not map but B is map -> it's different data
+	if !mapAok || !mapBok {
+		result.status = diffStatusDiff
+		result.diffCount = handlePrimitive(rawA, rawB, level).diffCount
+
+		return result
+	}
+
+	// if both are map
+
+	result.children = &diffChildren{
+		m: diffChildrenMap{},
+	}
+	result.status = diffStatusSame
+
+	// if B is map -> check the same key children
+	for _, valA := range mapA {
+		keyA, ok := valA.Key.(string)
+		if !ok {
+			keyA = missingKey
+		}
+
+		foundKey := false
+		for _, valB := range mapB {
+			keyB, ok := valB.Key.(string)
+			if !ok {
+				keyB = missingKey
+			}
+
+			if keyA != keyB {
 				continue
 			}
 
-			diffs := make([]*Diff, 0, len(list2))
+			result.children.m[keyA] = performDiff(valA.Value, valB.Value, level+1)
+			if result.children.m[keyA].status != diffStatusSame {
+				result.status = diffStatusDiff // top level diff can't specify actual reason
+			}
 
-			for _, yaml2 := range list2 {
-				if _, ok := checked[yaml2.id]; ok {
+			foundKey = true
+
+			break
+		}
+
+		if !foundKey {
+			result.children.m[keyA] = performDiff(valA.Value, nil, level+1)
+			result.status = diffStatusDiff // top level diff can't specify actual reason
+		}
+	}
+
+	// finding missing keyA
+	for _, valB := range mapB {
+		keyB, ok := valB.Key.(string)
+		if !ok {
+			keyB = missingKey
+		}
+
+		foundKey := false
+		for _, valA := range mapA {
+			keyA, ok := valA.Key.(string)
+			if !ok {
+				keyA = missingKey
+			}
+
+			if keyB != keyA {
+				continue
+			}
+
+			foundKey = true
+
+			break
+		}
+
+		if !foundKey {
+			result.children.m[keyB] = performDiff(nil, valB.Value, level+1)
+			result.status = diffStatusDiff // top level diff can't specify actual reason
+		}
+	}
+
+	sum := 0
+	for _, v := range result.children.m {
+		sum += v.diffCount
+	}
+	result.diffCount = sum
+
+	return result
+}
+
+func handleArray(rawA rawType, rawB rawType, level int) *diff {
+	result := &diff{
+		a:         rawA,
+		b:         rawB,
+		treeLevel: level,
+	}
+
+	arrayA, arrayAok := tryArray(rawA)
+	arrayB, arrayBok := tryArray(rawB)
+
+	// if both are not array
+	if !arrayAok && !arrayBok {
+		return nil
+	}
+
+	// if A is not array but B is array -> it's different data
+	if !arrayAok || !arrayBok {
+		result.status = diffStatusDiff
+		result.diffCount = handlePrimitive(rawA, rawB, level).diffCount
+
+		return result
+	}
+
+	// if both are array
+
+	result.children = &diffChildren{
+		a: diffChildrenArray{},
+	}
+	result.status = diffStatusSame
+
+	// check each elements is same or not
+	diffs := map[string]*diff{}
+	foundA := map[int]struct{}{}
+	foundB := map[int]struct{}{}
+
+	for keyA, valA := range arrayA {
+		for keyB, valB := range arrayB {
+			key := fmt.Sprintf("%d-%d", keyA, keyB)
+
+			diffs[key] = performDiff(valA, valB, level+1)
+			if diffs[key].status == diffStatusSame {
+				// store result and mark as confirmed
+				result.children.a = append(result.children.a, diffs[key])
+				foundA[keyA] = struct{}{}
+				foundB[keyB] = struct{}{}
+
+				break
+			}
+		}
+	}
+
+	// found all elements, it's same array
+	if len(foundA) == len(arrayA) && len(foundB) == len(arrayB) {
+		return result
+	}
+
+	result.status = diffStatusDiff
+
+	// check diff elements
+	for {
+		// arrayA < arrayB, and all confirmed arrayA
+		if len(foundA) == len(arrayA) {
+			for k, v := range arrayB {
+				if _, ok := foundB[k]; ok {
 					continue
 				}
 
-				s := &Diff{
-					Diff:        adjustFormat(cmp.Diff(yaml1.Raw, yaml2.Raw)),
-					Yaml1Struct: yaml1,
-					Yaml2Struct: yaml2,
-					Status:      DiffStatusExists,
-				}
-
-				if len(strings.TrimSpace(s.Diff)) < 1 {
-					s.Status = DiffStatusSame
-					s.Diff = createSameFormat(yaml1, s.Status)
-				} else {
-					for _, str := range strings.Split(s.Diff, "\n") {
-						trimmedstr := strings.TrimSpace(str)
-						if strings.HasPrefix(trimmedstr, "+") || strings.HasPrefix(str, "-") {
-							s.difflines++
-						}
-					}
-				}
-
-				diffs = append(diffs, s)
+				result.children.a = append(result.children.a, performDiff(nil, v, level+1))
 			}
 
-			if len(diffs) == 0 {
+			break
+		}
+
+		// arrayB < arrayA, and all confirmed arrayB
+		if len(foundB) == len(arrayB) {
+			for k, v := range arrayA {
+				if _, ok := foundA[k]; ok {
+					continue
+				}
+
+				result.children.a = append(result.children.a, performDiff(v, nil, level+1))
+			}
+
+			break
+		}
+
+		smallestDiff := &diff{diffCount: 100000} // FIXME
+		smallestKeyA := 0
+		smallestKeyB := 0
+
+		for keyA := range arrayA {
+			if _, ok := foundA[keyA]; ok {
 				continue
 			}
 
-			d := matchFunc(diffs)
-			if d == nil {
-				continue
+			for keyB := range arrayB {
+				if _, ok := foundB[keyB]; ok {
+					continue
+				}
+
+				key := fmt.Sprintf("%d-%d", keyA, keyB)
+				if diffs[key].status == diffStatusSame {
+					continue
+				}
+
+				if smallestDiff.diffCount > diffs[key].diffCount {
+					smallestDiff = diffs[key]
+					smallestKeyA = keyA
+					smallestKeyB = keyB
+				}
+			}
+		}
+
+		result.children.a = append(result.children.a, smallestDiff)
+		foundA[smallestKeyA] = struct{}{}
+		foundB[smallestKeyB] = struct{}{}
+	}
+
+	sum := 0
+	for _, v := range result.children.a {
+		sum += v.diffCount
+	}
+	result.diffCount = sum
+
+	return result
+}
+
+func handlePrimitive(rawA rawType, rawB rawType, level int) *diff {
+	result := &diff{
+		a:         rawA,
+		b:         rawB,
+		treeLevel: level,
+	}
+
+	strA := []rune(fmt.Sprint(rawA))
+	strB := []rune(fmt.Sprint(rawB))
+
+	switch {
+	case rawA == nil && rawB == nil:
+		result.status = diffStatusSame
+	case rawA == rawB:
+		result.status = diffStatusSame
+	case rawA == nil:
+		result.status = diffStatus1Missing
+		result.diffCount = len(strB)
+	case rawB == nil:
+		result.status = diffStatus2Missing
+		result.diffCount = len(strA)
+	default:
+		result.status = diffStatusDiff
+	}
+
+	// calculate diff size for diff
+	if result.status == diffStatusDiff {
+		maxLen := len(strA)
+		if lenB := len(strB); maxLen < lenB {
+			maxLen = lenB
+		}
+
+		for nA, a := range strA {
+			// lenA > lenB
+			if len(strB) <= nA {
+				result.diffCount = maxLen - nA
+
+				break
 			}
 
-			result = append(result, d)
-			checked[d.Yaml1Struct.id] = struct{}{}
-			checked[d.Yaml2Struct.id] = struct{}{}
-		}
-	}
+			// found diff in A and B strings
+			if b := strB[nA]; a != b {
+				result.diffCount = maxLen - nA
 
-	// check the unmarked items in list1
-	for _, yaml1 := range list1 {
-		if _, ok := checked[yaml1.id]; ok {
-			continue
+				break
+			}
 		}
 
-		result = append(
-			result,
-			&Diff{
-				Diff:        createSameFormat(yaml1, DiffStatus2Missing),
-				Yaml1Struct: yaml1,
-				Status:      DiffStatus2Missing,
-			},
-		)
-	}
-
-	for _, yaml2 := range list2 {
-		if _, ok := checked[yaml2.id]; ok {
-			continue
+		// guess lenA < lemB
+		if result.diffCount == 0 {
+			result.diffCount = maxLen - len(strA)
 		}
-
-		result = append(
-			result,
-			&Diff{
-				Diff:        createSameFormat(yaml2, DiffStatus1Missing),
-				Yaml2Struct: yaml2,
-				Status:      DiffStatus1Missing,
-			},
-		)
 	}
 
 	return result
 }
 
-func createSameFormat(y *RawYaml, status DiffStatus) string {
-	result := strings.Builder{}
+func tryMap(x rawType) (rawTypeMap, bool) {
+	m, ok := x.(yaml.MapSlice)
 
-	prefix := ""
-	switch status {
-	case DiffStatusSame:
-		prefix = "  "
-	case DiffStatus1Missing:
-		prefix = "+ "
-	case DiffStatus2Missing:
-		prefix = "- "
-	}
-
-	diff := cmp.Diff(y.Raw, struct{}{})
-
-	for _, str := range strings.Split(diff, "\n") {
-		if !strings.HasPrefix(str, "-") {
-			continue
-		}
-
-		// TODO: cmp.Diff is unstable use custom Reporter
-		str = strings.TrimSpace(str)
-		str = strings.Replace(str, "- 	", "", 1)
-		str = strings.Replace(str, "- 	", "", 1)
-
-		result.WriteString(prefix)
-		result.WriteString(str)
-		result.WriteRune('\n')
-	}
-
-	return adjustFormat(strings.TrimSuffix(result.String(), ",\n")) + "\n"
+	return m, ok
 }
 
-func adjustFormat(s string) string {
-	for ss, rr := range map[string]string{
-		`map[string]interface{}`: "Map",
-		`map[String]interface{}`: "Map",
-		`[]interface{}`:          "List",
-		`uint64`:                 "Number",
-		`int64`:                  "Number",
-		`string`:                 "String",
-		`bool`:                   "Boolean",
-	} {
-		s = strings.ReplaceAll(s, ss, rr)
-	}
+func tryMapItem(x rawType) (yaml.MapItem, bool) {
+	m, ok := x.(yaml.MapItem)
 
-	return s
+	return m, ok
+}
+
+func tryArray(x rawType) (rawTypeArray, bool) {
+	a, ok := x.([]interface{})
+
+	return a, ok
 }
