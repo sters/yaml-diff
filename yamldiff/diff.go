@@ -6,14 +6,13 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
-type DiffStatus int
+type diffStatus int
 
 const (
-	DiffStatusUnknown  DiffStatus = 0
-	DiffStatusSame     DiffStatus = 1
-	DiffStatusDiff     DiffStatus = 2
-	DiffStatus1Missing DiffStatus = 3
-	DiffStatus2Missing DiffStatus = 4
+	diffStatusSame     diffStatus = 1
+	diffStatusDiff     diffStatus = 2
+	diffStatus1Missing diffStatus = 3
+	diffStatus2Missing diffStatus = 4
 
 	missingKey = "000_unexpected-key_000"
 )
@@ -28,7 +27,7 @@ type (
 		b        rawType
 		children *diffChildren
 
-		status    DiffStatus
+		status    diffStatus
 		diffCount int
 		treeLevel int
 	}
@@ -76,7 +75,7 @@ func handleMap(rawA rawType, rawB rawType, level int) *diff {
 
 	// if A is not map but B is map -> it's different data
 	if !mapAok || !mapBok {
-		result.status = DiffStatusDiff
+		result.status = diffStatusDiff
 		result.diffCount = handlePrimitive(rawA, rawB, level).diffCount
 
 		return result
@@ -87,7 +86,7 @@ func handleMap(rawA rawType, rawB rawType, level int) *diff {
 	result.children = &diffChildren{
 		m: diffChildrenMap{},
 	}
-	result.status = DiffStatusSame
+	result.status = diffStatusSame
 
 	// if B is map -> check the same key children
 	for _, valA := range mapA {
@@ -108,8 +107,8 @@ func handleMap(rawA rawType, rawB rawType, level int) *diff {
 			}
 
 			result.children.m[keyA] = performDiff(valA.Value, valB.Value, level+1)
-			if result.children.m[keyA].status != DiffStatusSame {
-				result.status = DiffStatusDiff // top level diff can't specify actual reason
+			if result.children.m[keyA].status != diffStatusSame {
+				result.status = diffStatusDiff // top level diff can't specify actual reason
 			}
 
 			foundKey = true
@@ -119,7 +118,7 @@ func handleMap(rawA rawType, rawB rawType, level int) *diff {
 
 		if !foundKey {
 			result.children.m[keyA] = performDiff(valA.Value, nil, level+1)
-			result.status = DiffStatusDiff // top level diff can't specify actual reason
+			result.status = diffStatusDiff // top level diff can't specify actual reason
 		}
 	}
 
@@ -148,7 +147,7 @@ func handleMap(rawA rawType, rawB rawType, level int) *diff {
 
 		if !foundKey {
 			result.children.m[keyB] = performDiff(nil, valB.Value, level+1)
-			result.status = DiffStatusDiff // top level diff can't specify actual reason
+			result.status = diffStatusDiff // top level diff can't specify actual reason
 		}
 	}
 
@@ -178,7 +177,7 @@ func handleArray(rawA rawType, rawB rawType, level int) *diff {
 
 	// if A is not array but B is array -> it's different data
 	if !arrayAok || !arrayBok {
-		result.status = DiffStatusDiff
+		result.status = diffStatusDiff
 		result.diffCount = handlePrimitive(rawA, rawB, level).diffCount
 
 		return result
@@ -189,7 +188,7 @@ func handleArray(rawA rawType, rawB rawType, level int) *diff {
 	result.children = &diffChildren{
 		a: diffChildrenArray{},
 	}
-	result.status = DiffStatusSame
+	result.status = diffStatusSame
 
 	// check each elements is same or not
 	diffs := map[string]*diff{}
@@ -201,7 +200,7 @@ func handleArray(rawA rawType, rawB rawType, level int) *diff {
 			key := fmt.Sprintf("%d-%d", keyA, keyB)
 
 			diffs[key] = performDiff(valA, valB, level+1)
-			if diffs[key].status == DiffStatusSame {
+			if diffs[key].status == diffStatusSame {
 				// store result and mark as confirmed
 				result.children.a = append(result.children.a, diffs[key])
 				foundA[keyA] = struct{}{}
@@ -217,7 +216,7 @@ func handleArray(rawA rawType, rawB rawType, level int) *diff {
 		return result
 	}
 
-	result.status = DiffStatusDiff
+	result.status = diffStatusDiff
 
 	// check diff elements
 	for {
@@ -262,7 +261,7 @@ func handleArray(rawA rawType, rawB rawType, level int) *diff {
 				}
 
 				key := fmt.Sprintf("%d-%d", keyA, keyB)
-				if diffs[key].status == DiffStatusSame {
+				if diffs[key].status == diffStatusSame {
 					continue
 				}
 
@@ -300,21 +299,21 @@ func handlePrimitive(rawA rawType, rawB rawType, level int) *diff {
 
 	switch {
 	case rawA == nil && rawB == nil:
-		result.status = DiffStatusSame
+		result.status = diffStatusSame
 	case rawA == rawB:
-		result.status = DiffStatusSame
+		result.status = diffStatusSame
 	case rawA == nil:
-		result.status = DiffStatus1Missing
+		result.status = diffStatus1Missing
 		result.diffCount = len(strB)
 	case rawB == nil:
-		result.status = DiffStatus2Missing
+		result.status = diffStatus2Missing
 		result.diffCount = len(strA)
 	default:
-		result.status = DiffStatusDiff
+		result.status = diffStatusDiff
 	}
 
 	// calculate diff size for diff
-	if result.status == DiffStatusDiff {
+	if result.status == diffStatusDiff {
 		maxLen := len(strA)
 		if lenB := len(strB); maxLen < lenB {
 			maxLen = lenB

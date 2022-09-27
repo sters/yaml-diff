@@ -27,7 +27,7 @@ func dumpData(b io.Writer, diffPrefix string, level int, v rawType) {
 		return
 	}
 
-	fmt.Fprintf(b, "%s %s%#v\n", diffPrefix, indent(level), v)
+	dumpPrimitive(b, diffPrefix, level, "", v)
 }
 
 func dumpMap(b io.Writer, diffPrefix string, level int, m rawTypeMap) {
@@ -62,7 +62,7 @@ func dumpArrayItem(b io.Writer, diffPrefix string, level int, v rawType) {
 		return
 	}
 
-	fmt.Fprintf(b, "%s %s- %#v\n", diffPrefix, indent(level), v)
+	dumpPrimitive(b, diffPrefix, level, "- ", v)
 }
 
 func dumpMapItem(b io.Writer, diffPrefix string, level int, k string, v rawType) {
@@ -86,15 +86,19 @@ func dumpMapItem(b io.Writer, diffPrefix string, level int, k string, v rawType)
 		return
 	}
 
+	dumpPrimitive(b, diffPrefix, level, fmt.Sprintf("%s: ", k), v)
+}
+
+func dumpPrimitive(b io.Writer, diffPrefix string, level int, somethingPrefix string, v rawType) {
 	switch v.(type) {
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-		fmt.Fprintf(b, "%s %s%s: %d\n", diffPrefix, indent(level), k, v)
+		fmt.Fprintf(b, "%s %s%s%d\n", diffPrefix, indent(level), somethingPrefix, v)
 	case float32, float64:
-		fmt.Fprintf(b, "%s %s%s: %f\n", diffPrefix, indent(level), k, v)
+		fmt.Fprintf(b, "%s %s%s%f\n", diffPrefix, indent(level), somethingPrefix, v)
 	case string:
-		fmt.Fprintf(b, "%s %s%s: %s\n", diffPrefix, indent(level), k, v)
+		fmt.Fprintf(b, "%s %s%s\"%s\"\n", diffPrefix, indent(level), somethingPrefix, v)
 	default:
-		fmt.Fprintf(b, "%s %s%s: %#v\n", diffPrefix, indent(level), k, v)
+		fmt.Fprintf(b, "%s %s%s%#v\n", diffPrefix, indent(level), somethingPrefix, v)
 	}
 }
 
@@ -110,14 +114,14 @@ func (d *diff) dump(b io.Writer, level int) {
 				}
 
 				switch v.status {
-				case DiffStatusSame:
+				case diffStatusSame:
 					dumpArrayItem(b, " ", level, v.a)
-				case DiffStatusDiff:
+				case diffStatusDiff:
 					dumpArrayItem(b, "-", level, v.a)
 					dumpArrayItem(b, "+", level, v.b)
-				case DiffStatus1Missing:
+				case diffStatus1Missing:
 					dumpArrayItem(b, "+", level, v.b)
-				case DiffStatus2Missing:
+				case diffStatus2Missing:
 					dumpArrayItem(b, "-", level, v.a)
 				}
 			}
@@ -133,14 +137,14 @@ func (d *diff) dump(b io.Writer, level int) {
 				}
 
 				switch v.status {
-				case DiffStatusSame:
+				case diffStatusSame:
 					dumpMapItem(b, " ", level, k, v.a)
-				case DiffStatusDiff:
+				case diffStatusDiff:
 					dumpMapItem(b, "-", level, k, v.a)
 					dumpMapItem(b, "+", level, k, v.b)
-				case DiffStatus1Missing:
+				case diffStatus1Missing:
 					dumpMapItem(b, "+", level, k, v.b)
-				case DiffStatus2Missing:
+				case diffStatus2Missing:
 					dumpMapItem(b, "-", level, k, v.a)
 				}
 			}
@@ -150,14 +154,14 @@ func (d *diff) dump(b io.Writer, level int) {
 	}
 
 	switch d.status {
-	case DiffStatusSame:
+	case diffStatusSame:
 		dumpData(b, " ", level, d.a)
-	case DiffStatusDiff:
+	case diffStatusDiff:
 		dumpData(b, "-", level, d.a)
 		dumpData(b, "+", level, d.b)
-	case DiffStatus1Missing:
+	case diffStatus1Missing:
 		dumpData(b, "+", level, d.b)
-	case DiffStatus2Missing:
+	case diffStatus2Missing:
 		dumpData(b, "-", level, d.a)
 	}
 }
