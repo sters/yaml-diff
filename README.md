@@ -21,9 +21,7 @@ The result structure is the same as based or target yaml but format (includes ma
 
 ## Example
 
-<details><summary>`make run-example`</summary>
-
-You can try example directory.
+<details><summary>You can try example directory.</summary>
 
 ```text
 $ go run cmd/yaml-diff/main.go example/a.yaml example/b.yaml
