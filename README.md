@@ -7,7 +7,7 @@
 ## Usage
 
 ```
-go install github.com/sters/yaml-diff/cmd/yaml-diff
+go install github.com/sters/yaml-diff/cmd/yaml-diff@latest
 ```
 or download from [Releases](https://github.com/sters/yaml-diff/releases).
 
