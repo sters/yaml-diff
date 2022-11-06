@@ -1,7 +1,6 @@
 package yamldiff
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 	"testing"
@@ -317,14 +316,14 @@ func Test_diff_Dump(t *testing.T) {
 					diffCount: 2 + 1,
 					status:    DiffStatusDiff,
 				},
-				want: fmt.Sprintf(`
+				want: `
   - 1
   - 5
-  %s
+  -
     - 2
 -   - 3
 -   - 4
-- - 6`, "- "),
+- - 6`,
 			},
 		},
 	}
