@@ -43,6 +43,7 @@ type (
 	}
 )
 
+//nolint:gochecknoglobals
 var missingKey = _missingKey{}
 
 func (r *runner) performDiff(rawA rawType, rawB rawType, level int) *diff {
