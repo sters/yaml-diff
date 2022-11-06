@@ -102,7 +102,7 @@ func dumpMapItem(b io.Writer, diffPrefix string, level int, k string, v rawType)
 
 func dumpPrimitive(b io.Writer, diffPrefix string, level int, somethingPrefix string, v rawType) {
 	switch v.(type) {
-	case nil:
+	case nil, _missingKey:
 		fmt.Fprintf(b, "%s %s%s\n", diffPrefix, indent(level), somethingPrefix)
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		fmt.Fprintf(b, "%s %s%s%d\n", diffPrefix, indent(level), somethingPrefix, v)
