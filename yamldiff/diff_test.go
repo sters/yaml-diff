@@ -18,65 +18,65 @@ func Test_performDiff(t *testing.T) {
 				a: 1,
 				b: 1,
 				want: &diff{
-					status: diffStatusSame,
+					status: DiffStatusSame,
 				},
 			},
 			"int diff": {
 				a: 1,
 				b: 0,
 				want: &diff{
-					status:    diffStatusDiff,
+					status:    DiffStatusDiff,
 					diffCount: 1,
 				},
 			},
-			"int missing a": {
+			"int null a": {
 				b: 1,
 				want: &diff{
-					status:    diffStatus1Missing,
-					diffCount: 1,
+					status:    DiffStatusDiff,
+					diffCount: 5,
 				},
 			},
-			"int missing b": {
+			"int null b": {
 				a: 11,
 				want: &diff{
-					status:    diffStatus2Missing,
-					diffCount: 2,
+					status:    DiffStatusDiff,
+					diffCount: 5,
 				},
 			},
 			"string ok": {
 				a: "1",
 				b: "1",
 				want: &diff{
-					status: diffStatusSame,
+					status: DiffStatusSame,
 				},
 			},
 			"string diff": {
 				a: "1",
 				b: "0",
 				want: &diff{
-					status:    diffStatusDiff,
+					status:    DiffStatusDiff,
 					diffCount: 1,
 				},
 			},
-			"string missing a": {
+			"string null a": {
 				b: "1",
 				want: &diff{
-					status:    diffStatus1Missing,
-					diffCount: 1,
+					status:    DiffStatusDiff,
+					diffCount: 5,
 				},
 			},
-			"string missing b": {
+			"string null b": {
 				a: "11",
 				want: &diff{
-					status:    diffStatus2Missing,
-					diffCount: 2,
+					status:    DiffStatusDiff,
+					diffCount: 5,
 				},
 			},
 			"int vs string": {
 				a: "1",
 				b: 1,
 				want: &diff{
-					status:    diffStatusDiff,
+					status:    DiffStatusDiff,
 					diffCount: 0, // because it's only diff on type
 				},
 			},
@@ -84,7 +84,7 @@ func Test_performDiff(t *testing.T) {
 				a: "1",
 				b: 0,
 				want: &diff{
-					status:    diffStatusDiff,
+					status:    DiffStatusDiff,
 					diffCount: 1,
 				},
 			},
@@ -92,7 +92,7 @@ func Test_performDiff(t *testing.T) {
 				a: 1,
 				b: 0.5,
 				want: &diff{
-					status:    diffStatusDiff,
+					status:    DiffStatusDiff,
 					diffCount: 3,
 				},
 			},
@@ -100,7 +100,7 @@ func Test_performDiff(t *testing.T) {
 				a: "1",
 				b: 0.5,
 				want: &diff{
-					status:    diffStatusDiff,
+					status:    DiffStatusDiff,
 					diffCount: 3,
 				},
 			},
@@ -108,7 +108,7 @@ func Test_performDiff(t *testing.T) {
 				a: 1,
 				b: false,
 				want: &diff{
-					status:    diffStatusDiff,
+					status:    DiffStatusDiff,
 					diffCount: 5,
 				},
 			},
@@ -120,12 +120,12 @@ func Test_performDiff(t *testing.T) {
 				want: &diff{
 					children: &diffChildren{
 						a: diffChildrenArray{
-							{a: 1, b: 1, status: diffStatusSame, treeLevel: 1},
-							{a: 2, b: 2, status: diffStatusSame, treeLevel: 1},
-							{a: 3, b: 3, status: diffStatusSame, treeLevel: 1},
+							{a: 1, b: 1, status: DiffStatusSame, treeLevel: 1},
+							{a: 2, b: 2, status: DiffStatusSame, treeLevel: 1},
+							{a: 3, b: 3, status: DiffStatusSame, treeLevel: 1},
 						},
 					},
-					status: diffStatusSame,
+					status: DiffStatusSame,
 				},
 			},
 			"simple same different order": {
@@ -134,12 +134,12 @@ func Test_performDiff(t *testing.T) {
 				want: &diff{
 					children: &diffChildren{
 						a: diffChildrenArray{
-							{a: 1, b: 1, status: diffStatusSame, treeLevel: 1},
-							{a: 2, b: 2, status: diffStatusSame, treeLevel: 1},
-							{a: 3, b: 3, status: diffStatusSame, treeLevel: 1},
+							{a: 1, b: 1, status: DiffStatusSame, treeLevel: 1},
+							{a: 2, b: 2, status: DiffStatusSame, treeLevel: 1},
+							{a: 3, b: 3, status: DiffStatusSame, treeLevel: 1},
 						},
 					},
-					status: diffStatusSame,
+					status: DiffStatusSame,
 				},
 			},
 			"missing in A": {
@@ -148,13 +148,13 @@ func Test_performDiff(t *testing.T) {
 				want: &diff{
 					children: &diffChildren{
 						a: diffChildrenArray{
-							{a: 1, b: 1, status: diffStatusSame, treeLevel: 1},
-							{a: 2, b: 2, status: diffStatusSame, treeLevel: 1},
-							{b: 3, status: diffStatus1Missing, diffCount: 1, treeLevel: 1},
+							{a: 1, b: 1, status: DiffStatusSame, treeLevel: 1},
+							{a: 2, b: 2, status: DiffStatusSame, treeLevel: 1},
+							{b: 3, status: DiffStatusDiff, diffCount: 5, treeLevel: 1},
 						},
 					},
-					diffCount: 1,
-					status:    diffStatusDiff,
+					diffCount: 5,
+					status:    DiffStatusDiff,
 				},
 			},
 			"missing in B": {
@@ -163,13 +163,13 @@ func Test_performDiff(t *testing.T) {
 				want: &diff{
 					children: &diffChildren{
 						a: diffChildrenArray{
-							{a: 1, b: 1, status: diffStatusSame, treeLevel: 1},
-							{a: 3, b: 3, status: diffStatusSame, treeLevel: 1},
-							{a: 2, status: diffStatus2Missing, diffCount: 1, treeLevel: 1}, // missing is added by last
+							{a: 1, b: 1, status: DiffStatusSame, treeLevel: 1},
+							{a: 3, b: 3, status: DiffStatusSame, treeLevel: 1},
+							{a: 2, status: DiffStatusDiff, diffCount: 5, treeLevel: 1}, // missing is added by last
 						},
 					},
-					diffCount: 1,
-					status:    diffStatusDiff,
+					diffCount: 5,
+					status:    DiffStatusDiff,
 				},
 			},
 			"missing in A and B": {
@@ -178,13 +178,13 @@ func Test_performDiff(t *testing.T) {
 				want: &diff{
 					children: &diffChildren{
 						a: diffChildrenArray{
-							{a: 1, b: 1, status: diffStatusSame, treeLevel: 1},
-							{a: 3, b: 3, status: diffStatusSame, treeLevel: 1},
-							{a: 2, b: 4, status: diffStatusDiff, diffCount: 1, treeLevel: 1}, // because can't find missing, it's diff.
+							{a: 1, b: 1, status: DiffStatusSame, treeLevel: 1},
+							{a: 3, b: 3, status: DiffStatusSame, treeLevel: 1},
+							{a: 2, b: 4, status: DiffStatusDiff, diffCount: 1, treeLevel: 1}, // because can't find missing, it's diff.
 						},
 					},
 					diffCount: 1,
-					status:    diffStatusDiff,
+					status:    DiffStatusDiff,
 				},
 			},
 			"complicated": {
@@ -193,27 +193,25 @@ func Test_performDiff(t *testing.T) {
 				want: &diff{
 					children: &diffChildren{
 						a: diffChildrenArray{
-							{a: 1, b: 1, status: diffStatusSame, treeLevel: 1},
-							{a: 5, b: 5, status: diffStatusSame, treeLevel: 1},
+							{a: 1, b: 1, status: DiffStatusSame, treeLevel: 1},
+							{a: 5, b: 5, status: DiffStatusSame, treeLevel: 1},
 							{
-								a: rawTypeArray{2, 3, 4},
-								b: rawTypeArray{2},
-								children: &diffChildren{
-									a: diffChildrenArray{
-										{a: 2, b: 2, status: diffStatusSame, treeLevel: 2},
-										{a: 3, status: diffStatus2Missing, diffCount: 1, treeLevel: 2},
-										{a: 4, status: diffStatus2Missing, diffCount: 1, treeLevel: 2},
-									},
-								},
-								diffCount: 2,
-								status:    diffStatusDiff,
+								a:         6,
+								b:         rawTypeArray{2},
+								diffCount: 3,
+								status:    DiffStatusDiff,
 								treeLevel: 1,
 							},
-							{a: 6, status: diffStatus2Missing, diffCount: 1, treeLevel: 1},
+							{
+								a:         rawTypeArray{2, 3, 4},
+								status:    DiffStatusDiff,
+								diffCount: 7,
+								treeLevel: 1,
+							},
 						},
 					},
-					diffCount: 2 + 1,
-					status:    diffStatusDiff,
+					diffCount: 3 + 7,
+					status:    DiffStatusDiff,
 				},
 			},
 		},
@@ -231,12 +229,12 @@ func Test_performDiff(t *testing.T) {
 							"foo": {
 								a:         "bar",
 								b:         "bar",
-								status:    diffStatusSame,
+								status:    DiffStatusSame,
 								treeLevel: 1,
 							},
 						},
 					},
-					status: diffStatusSame,
+					status: DiffStatusSame,
 				},
 			},
 			"simple diff": {
@@ -252,14 +250,14 @@ func Test_performDiff(t *testing.T) {
 							"foo": {
 								a:         "bar",
 								b:         "baz",
-								status:    diffStatusDiff,
+								status:    DiffStatusDiff,
 								diffCount: 1,
 								treeLevel: 1,
 							},
 						},
 					},
 					diffCount: 1,
-					status:    diffStatusDiff,
+					status:    DiffStatusDiff,
 				},
 			},
 			"simple diff type": {
@@ -276,13 +274,13 @@ func Test_performDiff(t *testing.T) {
 								a:         "bar",
 								b:         1,
 								diffCount: 3,
-								status:    diffStatusDiff,
+								status:    DiffStatusDiff,
 								treeLevel: 1,
 							},
 						},
 					},
 					diffCount: 3,
-					status:    diffStatusDiff,
+					status:    DiffStatusDiff,
 				},
 			},
 			"simple diff type map and primitive": {
@@ -308,14 +306,14 @@ func Test_performDiff(t *testing.T) {
 									Value: "baz",
 								},
 								diffCount: len("{bar baz}"), // as primitive diff
-								status:    diffStatusDiff,
+								status:    DiffStatusDiff,
 								treeLevel: 1,
 							},
 						},
 					},
 
 					diffCount: len("{bar baz}"), // from child
-					status:    diffStatusDiff,
+					status:    DiffStatusDiff,
 				},
 			},
 			"complicated": {
@@ -368,7 +366,7 @@ func Test_performDiff(t *testing.T) {
 										"bar": {
 											a:         "baz",
 											b:         "baz",
-											status:    diffStatusSame,
+											status:    DiffStatusSame,
 											treeLevel: 2,
 										},
 										"baz": {
@@ -376,58 +374,126 @@ func Test_performDiff(t *testing.T) {
 											b: rawTypeMap{
 												yaml.MapItem{Key: "a", Value: "b"},
 											},
-											status:    diffStatusDiff,
+											status:    DiffStatusDiff,
 											diffCount: len("[{a b}]"),
 											treeLevel: 2,
 										},
 										"barr": {
 											a:         false,
-											status:    diffStatus2Missing,
+											status:    DiffStatus2Missing,
 											diffCount: 5,
 											treeLevel: 2,
 										},
 										"bazz": {
 											b:         1,
-											status:    diffStatus1Missing,
+											status:    DiffStatus1Missing,
 											diffCount: 1,
 											treeLevel: 2,
 										},
 									},
 								},
 								diffCount: (len("[{a b}]")) + (5) + (1),
-								status:    diffStatusDiff,
+								status:    DiffStatusDiff,
 								treeLevel: 1,
 							},
 							"bar": {
 								a:         1,
 								b:         "1",
 								diffCount: 0,
-								status:    diffStatusDiff,
+								status:    DiffStatusDiff,
 								treeLevel: 1,
 							},
 							"baz": {
 								a:         "1",
 								b:         1,
 								diffCount: 0,
-								status:    diffStatusDiff,
+								status:    DiffStatusDiff,
 								treeLevel: 1,
 							},
 							"zoo": {
 								a:         1,
 								diffCount: 1,
-								status:    diffStatus2Missing,
+								status:    DiffStatus2Missing,
 								treeLevel: 1,
 							},
 							"boo": {
 								b:         1,
 								diffCount: 1,
-								status:    diffStatus1Missing,
+								status:    DiffStatus1Missing,
 								treeLevel: 1,
 							},
 						},
 					},
 					diffCount: ((len("[{a b}]")) + (5) + (1)) + (0) + (0) + (1) + (1),
-					status:    diffStatusDiff,
+					status:    DiffStatusDiff,
+				},
+			},
+		},
+		"#27": {
+			"creationTimestamp: null": {
+				a: rawTypeMap{
+					yaml.MapItem{Key: "metadata", Value: rawTypeMap{
+						yaml.MapItem{Key: "creationTimestamp", Value: nil},
+						yaml.MapItem{Key: "name", Value: "nginx"},
+						yaml.MapItem{Key: "namespace", Value: "default"},
+					}},
+					yaml.MapItem{Key: "status", Value: nil},
+				},
+				b: rawTypeMap{
+					yaml.MapItem{Key: "metadata", Value: rawTypeMap{
+						yaml.MapItem{Key: "name", Value: "nginx"},
+						yaml.MapItem{Key: "namespace", Value: "default"},
+					}},
+				},
+				want: &diff{
+					children: &diffChildren{
+						m: diffChildrenMap{
+							"metadata": {
+								a: rawTypeMap{
+									yaml.MapItem{Key: "creationTimestamp", Value: nil},
+									yaml.MapItem{Key: "name", Value: "nginx"},
+									yaml.MapItem{Key: "namespace", Value: "default"},
+								},
+								b: rawTypeMap{
+									yaml.MapItem{Key: "name", Value: "nginx"},
+									yaml.MapItem{Key: "namespace", Value: "default"},
+								},
+								children: &diffChildren{
+									m: diffChildrenMap{
+										"creationTimestamp": &diff{
+											status:    DiffStatus2Missing,
+											a:         nil,
+											treeLevel: 2,
+											diffCount: 5,
+										},
+										"name": &diff{
+											status:    DiffStatusSame,
+											a:         "nginx",
+											b:         "nginx",
+											treeLevel: 2,
+										},
+										"namespace": &diff{
+											status:    DiffStatusSame,
+											a:         "default",
+											b:         "default",
+											treeLevel: 2,
+										},
+									},
+								},
+								diffCount: 5,
+								status:    DiffStatusDiff,
+								treeLevel: 1,
+							},
+							"status": &diff{
+								status:    DiffStatus2Missing,
+								a:         nil,
+								diffCount: 5,
+								treeLevel: 1,
+							},
+						},
+					},
+					diffCount: 5 + 5,
+					status:    DiffStatusDiff,
 				},
 			},
 		},
@@ -442,7 +508,101 @@ func Test_performDiff(t *testing.T) {
 				t.Run(n, func(t *testing.T) {
 					// t.Parallel()
 
-					got := performDiff(tc.a, tc.b, 0)
+					got := (&runner{}).performDiff(tc.a, tc.b, 0)
+
+					tc.want.a = tc.a
+					tc.want.b = tc.b
+					assert.Equal(t, tc.want, got)
+				})
+			}
+		})
+	}
+}
+
+func Test_performDiff_emptyAsNull(t *testing.T) {
+	tests := map[string]map[string]struct {
+		a    rawType
+		b    rawType
+		want *diff
+	}{
+		"#27": {
+			"creationTimestamp: null": {
+				a: rawTypeMap{
+					yaml.MapItem{Key: "metadata", Value: rawTypeMap{
+						yaml.MapItem{Key: "creationTimestamp", Value: nil},
+						yaml.MapItem{Key: "name", Value: "nginx"},
+						yaml.MapItem{Key: "namespace", Value: "default"},
+					}},
+					yaml.MapItem{Key: "status", Value: nil},
+				},
+				b: rawTypeMap{
+					yaml.MapItem{Key: "metadata", Value: rawTypeMap{
+						yaml.MapItem{Key: "name", Value: "nginx"},
+						yaml.MapItem{Key: "namespace", Value: "default"},
+					}},
+				},
+				want: &diff{
+					children: &diffChildren{
+						m: diffChildrenMap{
+							"metadata": {
+								a: rawTypeMap{
+									yaml.MapItem{Key: "creationTimestamp", Value: nil},
+									yaml.MapItem{Key: "name", Value: "nginx"},
+									yaml.MapItem{Key: "namespace", Value: "default"},
+								},
+								b: rawTypeMap{
+									yaml.MapItem{Key: "name", Value: "nginx"},
+									yaml.MapItem{Key: "namespace", Value: "default"},
+								},
+								children: &diffChildren{
+									m: diffChildrenMap{
+										"creationTimestamp": &diff{
+											status:    DiffStatusSame,
+											a:         nil,
+											b:         missingKey,
+											treeLevel: 2,
+										},
+										"name": &diff{
+											status:    DiffStatusSame,
+											a:         "nginx",
+											b:         "nginx",
+											treeLevel: 2,
+										},
+										"namespace": &diff{
+											status:    DiffStatusSame,
+											a:         "default",
+											b:         "default",
+											treeLevel: 2,
+										},
+									},
+								},
+								status:    DiffStatusSame,
+								treeLevel: 1,
+							},
+							"status": &diff{
+								status:    DiffStatusSame,
+								a:         nil,
+								b:         missingKey,
+								treeLevel: 1,
+							},
+						},
+					},
+					status: DiffStatusSame,
+				},
+			},
+		},
+	}
+	for n, tt := range tests {
+		tt := tt
+		t.Run(n, func(t *testing.T) {
+			// t.Parallel()
+
+			for n, tc := range tt {
+				tc := tc
+				t.Run(n, func(t *testing.T) {
+					// t.Parallel()
+
+					got := (&runner{option: doOptions{emptyAsNull: true}}).performDiff(tc.a, tc.b, 0)
 
 					tc.want.a = tc.a
 					tc.want.b = tc.b

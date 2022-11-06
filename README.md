@@ -73,6 +73,7 @@ $ go run cmd/yaml-diff/main.go example/a.yaml example/b.yaml
   this:
     is:
       the: "same"
+-     empty:
 
 + bar:
 +   - "missing in a.yaml"
@@ -81,35 +82,37 @@ $ go run cmd/yaml-diff/main.go example/a.yaml example/b.yaml
 +   - "missing in a.yaml"
 ```
 
-Even if it reverse order, it also worked properly.
-
 ```text
-$ go run cmd/yaml-diff/main.go example/b.yaml example/a.yaml
---- example/b.yaml
-+++ example/a.yaml
+$ go run cmd/yaml-diff/main.go --ignore-empty-fields example/a.yaml example/b.yaml
+--- example/a.yaml
++++ example/b.yaml
 
+  apiVersion: "v1"
+  kind: "Service"
   metadata:
     name: "my-service"
   spec:
+    selector:
+      app: "MyApp"
     ports:
       -
         protocol: "TCP"
+-       port: 80
++       port: 8080
         targetPort: 9376
--       port: 8080
-+       port: 80
-    selector:
-      app: "MyApp"
-  apiVersion: "v1"
-  kind: "Service"
 
   apiVersion: "apps/v1"
   kind: "Deployment"
+  metadata:
+    name: "app-deployment"
+    labels:
+      app: "MyApp"
   spec:
+-   replicas: 3
++   replicas: 10
     selector:
       matchLabels:
         app: "MyApp"
--   replicas: 10
-+   replicas: 3
     template:
       metadata:
         labels:
@@ -118,27 +121,24 @@ $ go run cmd/yaml-diff/main.go example/b.yaml example/a.yaml
         containers:
           -
             name: "app"
+-           image: "my-app:1.0.0"
++           image: "my-app:1.1.0"
             ports:
               -
                 containerPort: 9376
--           image: "my-app:1.1.0"
-+           image: "my-app:1.0.0"
-  metadata:
-    name: "app-deployment"
-    labels:
-      app: "MyApp"
 
-- bar:
--   - "missing in a.yaml"
-
-- baz:
--   - "missing in a.yaml"
+- foo: "missing-in-b"
 
   this:
     is:
       the: "same"
+      empty:
 
-+ foo: "missing-in-b"
++ bar:
++   - "missing in a.yaml"
+
++ baz:
++   - "missing in a.yaml"
 ```
 
 </details>

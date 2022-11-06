@@ -38,3 +38,4 @@ foo: missing-in-b
 this:
   is:
     the: same
+    empty:

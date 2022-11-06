@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -10,13 +11,16 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 3 {
+	ignoreEmptyFields := flag.Bool("ignore-empty-fields", false, "Ignore empty field")
+	flag.Parse()
+
+	args := flag.Args()
+	if len(args) != 2 {
 		fmt.Println("Usage: yaml-diff file1 file2")
 		os.Exit(1)
 	}
-
-	file1 := os.Args[1]
-	file2 := os.Args[2]
+	file1 := args[0]
+	file2 := args[1]
 
 	yamls1, err := yamldiff.Load(load(file1))
 	if err != nil {
@@ -28,8 +32,13 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%+v", err)
 	}
 
+	opts := []yamldiff.DoOptionFunc{}
+	if *ignoreEmptyFields {
+		opts = append(opts, yamldiff.EmptyAsNull())
+	}
+
 	fmt.Printf("--- %s\n+++ %s\n\n", file1, file2)
-	for _, diff := range yamldiff.Do(yamls1, yamls2) {
+	for _, diff := range yamldiff.Do(yamls1, yamls2, opts...) {
 		fmt.Println(diff.Dump())
 	}
 

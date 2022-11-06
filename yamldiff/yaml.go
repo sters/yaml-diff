@@ -59,20 +59,58 @@ type YamlDiff struct {
 	idB string
 }
 
+func (y *YamlDiff) Status() DiffStatus {
+	return y.d.status
+}
+
 func (y *YamlDiff) Dump() string {
 	return y.d.Dump()
 }
 
-func Do(rawA RawYamlList, rawB RawYamlList) []*YamlDiff {
-	return sortResult(rawA, rawB, findMinimumDiffs(performAllDiff(rawA, rawB)))
+type doOptions struct {
+	emptyAsNull bool
 }
 
-func performAllDiff(rawA RawYamlList, rawB RawYamlList) []*YamlDiff {
-	diffs := make([]*YamlDiff, 0, len(rawA)*len(rawB))
-	for _, a := range rawA {
-		for _, b := range rawB {
+type DoOptionFunc func(o *doOptions)
+
+func EmptyAsNull() DoOptionFunc {
+	return func(o *doOptions) {
+		o.emptyAsNull = true
+	}
+}
+
+func Do(rawA RawYamlList, rawB RawYamlList, options ...DoOptionFunc) []*YamlDiff {
+	opts := &doOptions{}
+	for _, o := range options {
+		o(opts)
+	}
+
+	r := &runner{
+		option: *opts,
+		rawA:   rawA,
+		rawB:   rawB,
+	}
+
+	r.performAllDiff()
+	r.findMinimumDiffs()
+	r.sortResult()
+
+	return r.diffs
+}
+
+type runner struct {
+	option doOptions
+	rawA   RawYamlList
+	rawB   RawYamlList
+	diffs  []*YamlDiff
+}
+
+func (r *runner) performAllDiff() {
+	diffs := make([]*YamlDiff, 0, len(r.rawA)*len(r.rawB))
+	for _, a := range r.rawA {
+		for _, b := range r.rawB {
 			diffs = append(diffs, &YamlDiff{
-				d:   performDiff(a.raw, b.raw, 0),
+				d:   r.performDiff(a.raw, b.raw, 0),
 				idA: a.id,
 				idB: b.id,
 			})
@@ -80,37 +118,37 @@ func performAllDiff(rawA RawYamlList, rawB RawYamlList) []*YamlDiff {
 	}
 
 	// Make more diffs `A:nil`` and `nil:B`` to find missing entry
-	for _, a := range rawA {
+	for _, a := range r.rawA {
 		diffs = append(diffs, &YamlDiff{
-			d:   performDiff(a.raw, nil, 0),
+			d:   r.performDiff(a.raw, nil, 0),
 			idA: a.id,
 			idB: fmt.Sprintf("empty-%d-%d", time.Now().UnixNano(), randInt()),
 		})
 	}
 
-	for _, b := range rawB {
+	for _, b := range r.rawB {
 		diffs = append(diffs, &YamlDiff{
-			d:   performDiff(nil, b.raw, 0),
+			d:   r.performDiff(nil, b.raw, 0),
 			idA: fmt.Sprintf("empty-%d-%d", time.Now().UnixNano(), randInt()),
 			idB: b.id,
 		})
 	}
 
-	return diffs
+	r.diffs = diffs
 }
 
-func findMinimumDiffs(diffs []*YamlDiff) []*YamlDiff {
-	sort.Slice(diffs, func(i, j int) bool {
-		if diffs[i].d.status == diffStatusSame {
+func (r *runner) findMinimumDiffs() {
+	sort.Slice(r.diffs, func(i, j int) bool {
+		if r.diffs[i].d.status == DiffStatusSame {
 			return true
 		}
-		return diffs[i].d.diffCount < diffs[j].d.diffCount
+		return r.diffs[i].d.diffCount < r.diffs[j].d.diffCount
 	})
 
 	result := []*YamlDiff{}
 	checked := map[string]interface{}{}
 
-	for _, d := range diffs {
+	for _, d := range r.diffs {
 		if _, ok := checked[d.idA]; ok {
 			continue
 		}
@@ -126,15 +164,15 @@ func findMinimumDiffs(diffs []*YamlDiff) []*YamlDiff {
 
 	// Even if missing entries in A or B, it should be covered by A:nil or nil:B case.
 
-	return result
+	r.diffs = result
 }
 
-func sortResult(rawA RawYamlList, rawB RawYamlList, diffs []*YamlDiff) []*YamlDiff {
+func (r *runner) sortResult() {
 	result := []*YamlDiff{}
 	checked := map[string]interface{}{}
 
-	for _, b := range rawA {
-		for _, d := range diffs {
+	for _, b := range r.rawA {
+		for _, d := range r.diffs {
 			if b.id != d.idA {
 				continue
 			}
@@ -151,8 +189,8 @@ func sortResult(rawA RawYamlList, rawB RawYamlList, diffs []*YamlDiff) []*YamlDi
 		}
 	}
 
-	for _, b := range rawB {
-		for _, d := range diffs {
+	for _, b := range r.rawB {
+		for _, d := range r.diffs {
 			if b.id != d.idB {
 				continue
 			}
@@ -169,5 +207,5 @@ func sortResult(rawA RawYamlList, rawB RawYamlList, diffs []*YamlDiff) []*YamlDi
 		}
 	}
 
-	return result
+	r.diffs = result
 }
