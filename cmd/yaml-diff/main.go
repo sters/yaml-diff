@@ -12,6 +12,7 @@ import (
 
 func main() {
 	ignoreEmptyFields := flag.Bool("ignore-empty-fields", false, "Ignore empty field")
+	ignoreZeroFields := flag.Bool("ignore-zero-fields", false, "Ignore zero field")
 	flag.Parse()
 
 	args := flag.Args()
@@ -35,6 +36,9 @@ func main() {
 	opts := []yamldiff.DoOptionFunc{}
 	if *ignoreEmptyFields {
 		opts = append(opts, yamldiff.EmptyAsNull())
+	}
+	if *ignoreZeroFields {
+		opts = append(opts, yamldiff.ZeroAsNull())
 	}
 
 	fmt.Printf("--- %s\n+++ %s\n\n", file1, file2)
