@@ -311,22 +311,22 @@ func (r *runner) handlePrimitive(rawA rawType, rawB rawType, level int) *diff {
 	case rawA == nil && rawB == nil:
 		result.status = DiffStatusSame
 	case rawA == missingKey:
-		if r.option.emptyAsNull && (rawB == nil || string(strB) == "{}" || string(strB) == "[]") {
+		switch {
+		case r.option.emptyAsNull && (rawB == nil || string(strB) == "{}" || string(strB) == "[]"),
+			r.option.zeroAsNull && (reflect.ValueOf(rawB).IsValid() && reflect.ValueOf(rawB).IsZero()):
 			result.status = DiffStatusSame
-		} else if r.option.zeroAsNull && (reflect.ValueOf(rawB).IsValid() && reflect.ValueOf(rawB).IsZero()) {
-			result.status = DiffStatusSame
-		} else {
+		default:
 			result.a = nil
 			result.status = DiffStatus1Missing
 			result.diffCount = len(strB)
 		}
 
 	case rawB == missingKey:
-		if r.option.emptyAsNull && rawA == nil {
+		switch {
+		case r.option.emptyAsNull && rawA == nil,
+			r.option.zeroAsNull && (reflect.ValueOf(rawA).IsValid() && reflect.ValueOf(rawA).IsZero()):
 			result.status = DiffStatusSame
-		} else if r.option.zeroAsNull && (reflect.ValueOf(rawA).IsValid() && reflect.ValueOf(rawA).IsZero()) {
-			result.status = DiffStatusSame
-		} else {
+		default:
 			result.b = nil
 			result.status = DiffStatus2Missing
 			result.diffCount = len(strA)
