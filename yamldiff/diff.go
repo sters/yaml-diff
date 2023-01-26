@@ -2,6 +2,7 @@ package yamldiff
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/goccy/go-yaml"
 )
@@ -312,6 +313,8 @@ func (r *runner) handlePrimitive(rawA rawType, rawB rawType, level int) *diff {
 	case rawA == missingKey:
 		if r.option.emptyAsNull && (rawB == nil || string(strB) == "{}" || string(strB) == "[]") {
 			result.status = DiffStatusSame
+		} else if r.option.zeroAsNull && (reflect.ValueOf(rawB).IsValid() && reflect.ValueOf(rawB).IsZero()) {
+			result.status = DiffStatusSame
 		} else {
 			result.a = nil
 			result.status = DiffStatus1Missing
@@ -320,6 +323,8 @@ func (r *runner) handlePrimitive(rawA rawType, rawB rawType, level int) *diff {
 
 	case rawB == missingKey:
 		if r.option.emptyAsNull && rawA == nil {
+			result.status = DiffStatusSame
+		} else if r.option.zeroAsNull && (reflect.ValueOf(rawA).IsValid() && reflect.ValueOf(rawA).IsZero()) {
 			result.status = DiffStatusSame
 		} else {
 			result.b = nil

@@ -50,6 +50,12 @@ this:
   is:
     the: same
     empty:
+---
+someStr: foo
+zeroStr: ""
+someInt: 5
+zeroInt: 0
+differs: fromA
 `
 	yamlB := `
 metadata:
@@ -95,6 +101,10 @@ baz:
 this:
   is:
     the: same
+---
+someStr: foo
+someInt: 5
+differs: fromB
 `
 
 	yamlsA, err := Load(yamlA)
@@ -119,6 +129,7 @@ this:
 
 	confirm(resultOfNoOptions(), []DoOptionFunc{})
 	confirm(resultOfWithEmpty(), []DoOptionFunc{EmptyAsNull()})
+	confirm(resultOfWithZero(), []DoOptionFunc{ZeroAsNull()})
 }
 
 func resultOfNoOptions() string {
@@ -169,6 +180,13 @@ func resultOfNoOptions() string {
     is:
       the: "same"
 -     empty:
+
+  someStr: "foo"
+- zeroStr: ""
+  someInt: 5
+- zeroInt: 0
+- differs: "fromA"
++ differs: "fromB"
 
 + bar:
 +   - "missing in a.yaml"
@@ -227,6 +245,78 @@ func resultOfWithEmpty() string {
     is:
       the: "same"
       empty:
+
+  someStr: "foo"
+- zeroStr: ""
+  someInt: 5
+- zeroInt: 0
+- differs: "fromA"
++ differs: "fromB"
+
++ bar:
++   - "missing in a.yaml"
+
++ baz:
++   - "missing in a.yaml"
+
+`
+}
+
+func resultOfWithZero() string {
+	return `
+  apiVersion: "v1"
+  kind: "Service"
+  metadata:
+    name: "my-service"
+  spec:
+    selector:
+      app: "MyApp"
+    ports:
+      -
+        protocol: "TCP"
+-       port: 80
++       port: 8080
+        targetPort: 9376
+
+  apiVersion: "apps/v1"
+  kind: "Deployment"
+  metadata:
+    name: "app-deployment"
+    labels:
+      app: "MyApp"
+  spec:
+-   replicas: 3
++   replicas: 10
+    selector:
+      matchLabels:
+        app: "MyApp"
+    template:
+      metadata:
+        labels:
+          app: "MyApp"
+      spec:
+        containers:
+          -
+            name: "app"
+-           image: "my-app:1.0.0"
++           image: "my-app:1.1.0"
+            ports:
+              -
+                containerPort: 9376
+
+- foo: "missing-in-b"
+
+  this:
+    is:
+      the: "same"
+-     empty:
+
+  someStr: "foo"
+  zeroStr: ""
+  someInt: 5
+  zeroInt: 0
+- differs: "fromA"
++ differs: "fromB"
 
 + bar:
 +   - "missing in a.yaml"

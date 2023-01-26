@@ -497,6 +497,80 @@ func Test_performDiff(t *testing.T) {
 				},
 			},
 		},
+		"#30": {
+			"zero string": {
+				a: rawTypeMap{
+					yaml.MapItem{Key: "strA", Value: "foo"},
+					yaml.MapItem{Key: "strB", Value: ""},
+					yaml.MapItem{Key: "strC", Value: ""},
+				},
+				b: rawTypeMap{
+					yaml.MapItem{Key: "strA", Value: "foo"},
+					yaml.MapItem{Key: "strB", Value: ""},
+				},
+				want: &diff{
+					children: &diffChildren{
+						m: diffChildrenMap{
+							"strA": &diff{
+								status:    DiffStatusSame,
+								a:         "foo",
+								b:         "foo",
+								treeLevel: 1,
+							},
+							"strB": &diff{
+								status:    DiffStatusSame,
+								a:         "",
+								b:         "",
+								treeLevel: 1,
+							},
+							"strC": &diff{
+								status:    DiffStatus2Missing,
+								a:         "",
+								treeLevel: 1,
+							},
+						},
+					},
+					status: DiffStatusDiff,
+				},
+			},
+			"zero int": {
+				a: rawTypeMap{
+					yaml.MapItem{Key: "intA", Value: 5},
+					yaml.MapItem{Key: "intB", Value: 0},
+					yaml.MapItem{Key: "intC", Value: 0},
+				},
+				b: rawTypeMap{
+					yaml.MapItem{Key: "intA", Value: 5},
+					yaml.MapItem{Key: "intB", Value: 0},
+				},
+				want: &diff{
+					children: &diffChildren{
+						m: diffChildrenMap{
+							"intA": &diff{
+								status:    DiffStatusSame,
+								a:         5,
+								b:         5,
+								treeLevel: 1,
+							},
+							"intB": &diff{
+								status:    DiffStatusSame,
+								a:         0,
+								b:         0,
+								treeLevel: 1,
+							},
+							"intC": &diff{
+								status:    DiffStatus2Missing,
+								a:         0,
+								diffCount: 1,
+								treeLevel: 1,
+							},
+						},
+					},
+					diffCount: 1,
+					status:    DiffStatusDiff,
+				},
+			},
+		},
 	}
 	for n, tt := range tests {
 		tt := tt
@@ -603,6 +677,108 @@ func Test_performDiff_emptyAsNull(t *testing.T) {
 					// t.Parallel()
 
 					got := (&runner{option: doOptions{emptyAsNull: true}}).performDiff(tc.a, tc.b, 0)
+
+					tc.want.a = tc.a
+					tc.want.b = tc.b
+					assert.Equal(t, tc.want, got)
+				})
+			}
+		})
+	}
+}
+
+func Test_performDiff_zeroAsNull(t *testing.T) {
+	tests := map[string]map[string]struct {
+		a    rawType
+		b    rawType
+		want *diff
+	}{
+		"#30": {
+			"zero string": {
+				a: rawTypeMap{
+					yaml.MapItem{Key: "strA", Value: "foo"},
+					yaml.MapItem{Key: "strB", Value: ""},
+					yaml.MapItem{Key: "strC", Value: ""},
+				},
+				b: rawTypeMap{
+					yaml.MapItem{Key: "strA", Value: "foo"},
+					yaml.MapItem{Key: "strB", Value: ""},
+				},
+				want: &diff{
+					children: &diffChildren{
+						m: diffChildrenMap{
+							"strA": &diff{
+								status:    DiffStatusSame,
+								a:         "foo",
+								b:         "foo",
+								treeLevel: 1,
+							},
+							"strB": &diff{
+								status:    DiffStatusSame,
+								a:         "",
+								b:         "",
+								treeLevel: 1,
+							},
+							"strC": &diff{
+								status:    DiffStatusSame,
+								a:         "",
+								b:         missingKey,
+								treeLevel: 1,
+							},
+						},
+					},
+					status: DiffStatusSame,
+				},
+			},
+			"zero int": {
+				a: rawTypeMap{
+					yaml.MapItem{Key: "intA", Value: 5},
+					yaml.MapItem{Key: "intB", Value: 0},
+					yaml.MapItem{Key: "intC", Value: 0},
+				},
+				b: rawTypeMap{
+					yaml.MapItem{Key: "intA", Value: 5},
+					yaml.MapItem{Key: "intB", Value: 0},
+				},
+				want: &diff{
+					children: &diffChildren{
+						m: diffChildrenMap{
+							"intA": &diff{
+								status:    DiffStatusSame,
+								a:         5,
+								b:         5,
+								treeLevel: 1,
+							},
+							"intB": &diff{
+								status:    DiffStatusSame,
+								a:         0,
+								b:         0,
+								treeLevel: 1,
+							},
+							"intC": &diff{
+								status:    DiffStatusSame,
+								a:         0,
+								b:         missingKey,
+								treeLevel: 1,
+							},
+						},
+					},
+					status: DiffStatusSame,
+				},
+			},
+		},
+	}
+	for n, tt := range tests {
+		tt := tt
+		t.Run(n, func(t *testing.T) {
+			// t.Parallel()
+
+			for n, tc := range tt {
+				tc := tc
+				t.Run(n, func(t *testing.T) {
+					// t.Parallel()
+
+					got := (&runner{option: doOptions{zeroAsNull: true}}).performDiff(tc.a, tc.b, 0)
 
 					tc.want.a = tc.a
 					tc.want.b = tc.b

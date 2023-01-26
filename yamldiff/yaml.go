@@ -69,6 +69,7 @@ func (y *YamlDiff) Dump() string {
 
 type doOptions struct {
 	emptyAsNull bool
+	zeroAsNull  bool
 }
 
 type DoOptionFunc func(o *doOptions)
@@ -76,6 +77,12 @@ type DoOptionFunc func(o *doOptions)
 func EmptyAsNull() DoOptionFunc {
 	return func(o *doOptions) {
 		o.emptyAsNull = true
+	}
+}
+
+func ZeroAsNull() DoOptionFunc {
+	return func(o *doOptions) {
+		o.zeroAsNull = true
 	}
 }
 
