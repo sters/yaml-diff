@@ -15,7 +15,7 @@ or download from [Releases](https://github.com/sters/yaml-diff/releases).
 yaml-diff path/to/foo.yaml path/to/bar.yaml
 ```
 
-If the given yaml has a [`---` separated structure](https://yaml.org/spec/1.2/spec.html#id2760395), then the two yaml's will get all the differences in their respective structures. The one with the smallest difference is considered to be the same structure and the difference is displayed.
+If the given yaml has a [`---` separated structure](https://yaml.org/spec/1.2.2/#22-structures), then the two yaml's will get all the differences in their respective structures. The one with the smallest difference is considered to be the same structure and the difference is displayed.
 
 The result structure is the same as based or target yaml but format (includes map fields order) is different.
 
