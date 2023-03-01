@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/goccy/go-yaml v1.9.8
 	github.com/golangci/golangci-lint v1.51.1
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
 )
 
 require (
