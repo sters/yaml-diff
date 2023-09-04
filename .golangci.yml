@@ -29,6 +29,7 @@ linters:
     - paralleltest
     - testpackage
     - wsl
+    - depguard
 
 issues:
   exclude-rules:
