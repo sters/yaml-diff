@@ -3,7 +3,7 @@ module github.com/sters/yaml-diff
 go 1.19
 
 require (
-	github.com/goccy/go-yaml v1.11.2
+	github.com/goccy/go-yaml v1.11.3
 	github.com/golangci/golangci-lint v1.55.1
 	github.com/stretchr/testify v1.8.4
 )
