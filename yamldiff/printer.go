@@ -109,7 +109,8 @@ func dumpPrimitive(b io.Writer, diffPrefix string, level int, somethingPrefix st
 	case float32, float64:
 		fmt.Fprintf(b, "%s %s%s%f\n", diffPrefix, indent(level), somethingPrefix, v)
 	case string:
-		fmt.Fprintf(b, "%s %s%s\"%s\"\n", diffPrefix, indent(level), somethingPrefix, v)
+		// try escape special characters
+		fmt.Fprintf(b, "%s %s%s%#v\n", diffPrefix, indent(level), somethingPrefix, v)
 	default:
 		fmt.Fprintf(b, "%s %s%s%#v\n", diffPrefix, indent(level), somethingPrefix, v)
 	}

@@ -3,10 +3,23 @@ package yamldiff
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func confirmYaml(t *testing.T, yamlA, yamlB RawYamlList, want string, opts []DoOptionFunc) {
+	t.Helper()
+
+	result := "\n"
+	for _, diff := range Do(yamlA, yamlB, opts...) {
+		result += diff.Dump()
+		result += "\n"
+	}
+
+	assert.Equal(t, strings.TrimSpace(want), strings.TrimSpace(result))
+}
 
 func Test(t *testing.T) {
 	yamlA := `
@@ -117,19 +130,9 @@ differs: fromB
 		fmt.Fprintf(os.Stderr, "%+v", err)
 	}
 
-	confirm := func(expect string, opts []DoOptionFunc) {
-		result := "\n"
-		for _, diff := range Do(yamlsA, yamlsB, opts...) {
-			result += diff.Dump()
-			result += "\n"
-		}
-
-		assert.Equal(t, expect, result)
-	}
-
-	confirm(resultOfNoOptions(), []DoOptionFunc{})
-	confirm(resultOfWithEmpty(), []DoOptionFunc{EmptyAsNull()})
-	confirm(resultOfWithZero(), []DoOptionFunc{ZeroAsNull()})
+	confirmYaml(t, yamlsA, yamlsB, resultOfNoOptions(), []DoOptionFunc{})
+	confirmYaml(t, yamlsA, yamlsB, resultOfWithEmpty(), []DoOptionFunc{EmptyAsNull()})
+	confirmYaml(t, yamlsA, yamlsB, resultOfWithZero(), []DoOptionFunc{ZeroAsNull()})
 }
 
 func resultOfNoOptions() string {
@@ -325,4 +328,48 @@ func resultOfWithZero() string {
 +   - "missing in a.yaml"
 
 `
+}
+
+func TestForSpecificIssues(t *testing.T) {
+	tests := map[string]struct {
+		yamlA  string
+		yamlB  string
+		option []DoOptionFunc
+		want   string
+	}{
+		// TODO: It should be extracted as multiline format to understand easily. It needs to refactor (*diff).dump()
+		"#52": {
+			yamlA: `
+data:
+  config: |
+    logging.a: false
+    logging.b: false`,
+			yamlB: `
+data:
+  config: |
+    logging.a: false
+    logging.c: false`,
+			want: `
+  data:
+-   config: "logging.a: false\nlogging.b: false"
++   config: "logging.a: false\nlogging.c: false"`,
+		},
+	}
+
+	for key, test := range tests {
+		key, test := key, test
+		t.Run(key, func(t *testing.T) {
+			yamlA, err := Load(test.yamlA)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%+v", err)
+			}
+
+			yamlB, err := Load(test.yamlB)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%+v", err)
+			}
+
+			confirmYaml(t, yamlA, yamlB, test.want, test.option)
+		})
+	}
 }
