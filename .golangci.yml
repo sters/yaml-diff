@@ -30,6 +30,14 @@ linters:
     - testpackage
     - wsl
     - depguard
+    - perfsprint
+    - scopelint
+    - golint
+    - structcheck
+    - maligned
+    - ifshort
+    - varcheck
+    - deadcode
 
 issues:
   exclude-rules:
