@@ -1,4 +1,4 @@
-module github.com/sters/yaml-diff
+module github.com/AsakoKabe/yaml-diff
 
 go 1.21
 

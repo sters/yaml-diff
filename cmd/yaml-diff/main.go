@@ -7,12 +7,13 @@ import (
 	"log"
 	"os"
 
-	"github.com/sters/yaml-diff/yamldiff"
+	"github.com/AsakoKabe/yaml-diff/yamldiff"
 )
 
 func main() {
 	ignoreEmptyFields := flag.Bool("ignore-empty-fields", false, "Ignore empty field")
 	ignoreZeroFields := flag.Bool("ignore-zero-fields", false, "Ignore zero field")
+	quiet := flag.Bool("quiet", false, "Print if diff exist")
 	flag.Parse()
 
 	args := flag.Args()
@@ -41,12 +42,19 @@ func main() {
 		opts = append(opts, yamldiff.ZeroAsNull())
 	}
 
-	fmt.Printf("--- %s\n+++ %s\n\n", file1, file2)
+	if !*quiet {
+		fmt.Printf("--- %s\n+++ %s\n\n", file1, file2)
+	}
 	for _, diff := range yamldiff.Do(yamls1, yamls2, opts...) {
+		if *quiet && diff.Status() == yamldiff.DiffStatusSame {
+			continue
+		}
 		fmt.Println(diff.Dump())
 	}
 
-	fmt.Print()
+	if !*quiet {
+		fmt.Print()
+	}
 }
 
 func load(f string) string {
