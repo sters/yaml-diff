@@ -354,6 +354,22 @@ data:
 -   config: "logging.a: false\nlogging.b: false"
 +   config: "logging.a: false\nlogging.c: false"`,
 		},
+		"#29": {
+			yamlA: `
+value: |-
+  foo
+  bar
+  baz
+  special
+    multiline
+`,
+			yamlB: `
+value: "foo\nbar\nbaz\n\
+special\n\
+\  multiline"
+`,
+			want: `value: "foo\nbar\nbaz\nspecial\n  multiline"`,
+		},
 	}
 
 	for key, test := range tests {
