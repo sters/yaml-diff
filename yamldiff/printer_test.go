@@ -328,12 +328,10 @@ func Test_diff_Dump(t *testing.T) {
 		},
 	}
 	for n, tt := range tests {
-		tt := tt
 		t.Run(n, func(t *testing.T) {
 			// t.Parallel()
 
 			for n, tc := range tt {
-				tc := tc
 				t.Run(n, func(t *testing.T) {
 					// t.Parallel()
 

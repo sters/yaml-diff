@@ -573,12 +573,10 @@ func Test_performDiff(t *testing.T) {
 		},
 	}
 	for n, tt := range tests {
-		tt := tt
 		t.Run(n, func(t *testing.T) {
 			// t.Parallel()
 
 			for n, tc := range tt {
-				tc := tc
 				t.Run(n, func(t *testing.T) {
 					// t.Parallel()
 
@@ -667,12 +665,10 @@ func Test_performDiff_emptyAsNull(t *testing.T) {
 		},
 	}
 	for n, tt := range tests {
-		tt := tt
 		t.Run(n, func(t *testing.T) {
 			// t.Parallel()
 
 			for n, tc := range tt {
-				tc := tc
 				t.Run(n, func(t *testing.T) {
 					// t.Parallel()
 
@@ -769,12 +765,10 @@ func Test_performDiff_zeroAsNull(t *testing.T) {
 		},
 	}
 	for n, tt := range tests {
-		tt := tt
 		t.Run(n, func(t *testing.T) {
 			// t.Parallel()
 
 			for n, tc := range tt {
-				tc := tc
 				t.Run(n, func(t *testing.T) {
 					// t.Parallel()
 

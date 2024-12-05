@@ -373,7 +373,6 @@ special\n\
 	}
 
 	for key, test := range tests {
-		key, test := key, test
 		t.Run(key, func(t *testing.T) {
 			yamlA, err := Load(test.yamlA)
 			if err != nil {
