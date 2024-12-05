@@ -7,7 +7,7 @@ toolchain go1.21.4
 require (
 	github.com/goccy/go-yaml v1.11.3
 	github.com/golangci/golangci-lint v1.56.2
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 )
 
 require (
