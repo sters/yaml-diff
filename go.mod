@@ -1,11 +1,10 @@
 module github.com/sters/yaml-diff
 
 go 1.21
-
-toolchain go1.21.4
+toolchain go1.22.5
 
 require (
-	github.com/goccy/go-yaml v1.11.3
+	github.com/goccy/go-yaml v1.15.6
 	github.com/golangci/golangci-lint v1.56.2
 	github.com/stretchr/testify v1.9.0
 )
@@ -183,7 +182,6 @@ require (
 	golang.org/x/sys v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.18.0 // indirect
-	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
