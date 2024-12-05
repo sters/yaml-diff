@@ -24,6 +24,7 @@ linters:
     - interfacer
     - ireturn
     - maintidx
+    - mnd
     - nlreturn
     - nosnakecase
     - paralleltest
