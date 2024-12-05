@@ -27,7 +27,7 @@ test:
 
 .PHONY: cover
 cover:
-	go test -v -race -coverpkg=./... -coverprofile=coverage.txt ./...
+	go test -v -race -coverpkg=./... -coverprofile=coverage.out ./...
 
 .PHONY: tidy
 tidy:
