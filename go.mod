@@ -3,7 +3,7 @@ module github.com/sters/yaml-diff
 go 1.23
 
 require (
-	github.com/goccy/go-yaml v1.15.6
+	github.com/goccy/go-yaml v1.15.10
 	github.com/stretchr/testify v1.10.0
 )
 
