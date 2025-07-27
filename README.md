@@ -4,6 +4,14 @@
 [![codecov](https://codecov.io/gh/sters/yaml-diff/branch/main/graph/badge.svg)](https://codecov.io/gh/sters/yaml-diff)
 [![go-report](https://goreportcard.com/badge/github.com/sters/yaml-diff)](https://goreportcard.com/report/github.com/sters/yaml-diff)
 
+## Deprecated
+
+I'm no longer maintein this repo. Instead, I'm creating an another tool which is more generic version of yaml-diff. Please see this repo.
+
+https://github.com/sters/diffnest
+
+---
+
 ## Usage
 
 ```
